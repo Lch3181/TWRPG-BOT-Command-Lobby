@@ -1,8 +1,7 @@
 const fs = require('fs');
 const Fuse = require('fuse.js');
 const Discord = require('discord.js');
-const { sequelize } = require('../models/Host');
-const { parse } = require('path');
+const { sequelize } = require('../models/Lobby');
 /*{
     "userId": "",
     "guildId": "",
@@ -30,10 +29,10 @@ const { parse } = require('path');
     }]
 }*/
 module.exports = {
-    name: 'host',
+    name: 'lobby',
     description: "for game lobby hosting template",
     usage: '<boss name>',
-    async execute(message, args, Host) {
+    async execute(message, args, Lobby) {
         let embed = new Discord.MessageEmbed();
         let bosses = JSON.parse(fs.readFileSync('./twrpg-info/bosses.json', 'utf-8'));
         var args = args.split('|');
@@ -61,7 +60,7 @@ module.exports = {
 
         //unhost
         if (args[0] === 'unhost') {
-            result = await Host.findByPk(userId);
+            result = await Lobby.findByPk(userId);
             if (result === null) {
                 message.channel.send('You have not host any lobby yet.');
             } else {
@@ -87,7 +86,7 @@ module.exports = {
 
         //rmk
         if (args[0] === 'rmk') {
-            result = await Host.findByPk(userId);
+            result = await Lobby.findByPk(userId);
             if (result === null) {
                 message.channel.send('You have not host any lobby yet.');
             } else {
@@ -101,7 +100,7 @@ module.exports = {
                 lobby.drops.push(args[1] == null ? 'Air' : args[1]);
                 slots = result.slots;
 
-                await Host.update({
+                await Lobby.update({
                     lobby
                 }, {
                     where: {
@@ -178,7 +177,7 @@ module.exports = {
 
         //create lobby
         if (args[0] === 'host') {
-            [result, created] = await Host.findOrCreate({
+            [result, created] = await Lobby.findOrCreate({
                 where: {
                     userId
                 },

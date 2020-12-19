@@ -2,7 +2,7 @@ require('dotenv').config();
 const discord = require('discord.js');
 const client = new discord.Client({ partials: ['MESSAGE', 'REACTION'] });
 const db = require('./database');
-const Host = require('./models/Host');
+const Lobby = require('./models/Lobby');
 const prefix = '-';
 const fs = require('fs');
 client.commands = new discord.Collection();
@@ -22,8 +22,8 @@ client.once('ready', () => {
     db.authenticate()
         .then(() => {
             console.log('Connected to Database');
-            Host.init(db);
-            Host.sync();
+            Lobby.init(db);
+            Lobby.sync();
         }).catch((err) => console.log(err));
 });
 
@@ -37,7 +37,7 @@ client.on('message', async message => {
 
     switch (command) {
         case 'lobby':
-            client.commands.get('lobby').execute(message, args, Host);
+            client.commands.get('lobby').execute(message, args, Lobby);
             break;
         default:
             console.log('undefinded command: ' + command);
