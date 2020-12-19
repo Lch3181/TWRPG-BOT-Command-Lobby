@@ -1,0 +1,98 @@
+[
+    {
+        "type": "Type-A",
+        "suffix": "Fixed Reduction",
+        "debufftype": "Armor Reduction",
+        "names": [
+            "Corruptor (Passive)",
+            "Anger (Passive)",
+            "Heart of Ifrit (Passive)",
+            "Frost Web Brooch (Passive)",
+            "Fairy Robe - Fairy Fire (Active)",
+            "Guardian of the Skies (Active)",
+            "Horns of Destruction (Active)",
+            "Demonic Fist (Active)"
+        ]
+    },
+    {
+        "type": "Type-A",
+        "suffix": "None",
+        "debufftype": "Magic Defense Reduction",
+        "names": [
+            "Staff of Souls (Active)",
+            "Hell Riser (Active)",
+            "Armageddon (Active)",
+            "Eyes of the Watcher (Active)"
+        ]
+    },
+    {
+        "type": "Type-B",
+        "suffix": "None",
+        "debufftype": "Magic Defense Reduction",
+        "names": [
+            "Ring of Composure (Passive)",
+            "Ring of Despair (Passive)",
+            "Cloak of the Fallen Shadows (Passive)",
+            "Cape of Deep Abyss (Passive)"
+        ]
+    },
+    {
+        "type": "Type-C",
+        "suffix": "None",
+        "debufftype": "Magic Defense Reduction",
+        "names": [
+            "Soul Weaver - Astral Walk (Active)",
+            "Elementalist - Charge (Passive)",
+            "Berserker - Howling [W] (Active)"
+        ]
+    },
+    {
+        "type": "Type-D",
+        "suffix": "None",
+        "debufftype": "Magic Defense Reduction",
+        "names": [
+            "Dark Knight - Defile (Active)",
+            "Witch - Death Field (Active)"
+        ]
+    },
+    {
+        "type": "Type-A",
+        "suffix": "None",
+        "debufftype": "Increased Damage Taken",
+        "names": [
+            "Lancer - Nerve Strike [E]",
+            "Crusader - Strike of Honor [E]",
+            "Merchant - Bag Slam [Q]",
+            "Swordsman - Illusal Dance [T]",
+            "Shooter - Distortion [R]",
+            "Alchemist - Rolling Golem [R] → [R] → [W]",
+            "Fighter - Chain Blow [E]"
+        ]
+    },
+    {
+        "type": "Type-B",
+        "suffix": "None",
+        "debufftype": "Increased Damage Taken",
+        "names": [
+            "Hades, the Armor of Despair (Passive)"
+        ]
+    },
+    {
+        "type": "Type-C",
+        "suffix": "None",
+        "debufftype": "Increased Damage Taken",
+        "names": [
+            "Soul Weaver - Unholy Blast [Q]"
+        ]
+    },
+    {
+        "type": "Type-A",
+        "suffix": "None",
+        "debufftype": "Reduced Healing Received",
+        "names": [
+            "Parasitic Staff (Active)",
+            "Merchant - Throw Money [R]",
+            "Sword Enchanter - Ultimate Enchant [F]"
+        ]
+    }
+]
