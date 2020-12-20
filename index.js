@@ -29,11 +29,11 @@ client.once('ready', () => {
 
 client.on('message', async message => {
     if (!message.content.startsWith(prefix) || message.author.bot) return;
-    //console.log(message);
+    //console.log(message.mentions);
 
     const input = message.content.slice(prefix.length).trim().split(' ');
     const command = input.shift();
-    const args = input.join(' ');
+    var args = input.join(' ');
 
     switch (command) {
         case 'lobby':

@@ -9,6 +9,7 @@ const { sequelize } = require('../models/Lobby');
     "lobby": {
         "host": "",
         "gameName": "",
+        "bot":"",
         "rule": "",
         "note":"",
         "status": "",
@@ -22,7 +23,7 @@ const { sequelize } = require('../models/Lobby');
             "capacity": 1,
             "users": [{
                 "player1": {
-                    "joined": false
+                    "ingame": false
                 }
             }]
         }
@@ -35,137 +36,267 @@ module.exports = {
     async execute(message, args, Lobby) {
         let embed = new Discord.MessageEmbed();
         let bosses = JSON.parse(fs.readFileSync('./twrpg-info/bosses.json', 'utf-8'));
-        var args = args.split('|');
+        var args = args.split('|').map(x => x.trim());
         let content = [];
         let description = '';
         let userId = message.author.id;
-        let guildId = message.guild.id;
         let messageId = "";
-        let lobby = { host: message.author.tag};
+        let lobby = { host: message.author.tag };
         let slots = [];
         let result, created;
 
         //purge user command
-        message.delete({timeout:5000});
+        //message.delete({ timeout: 5000 });
 
-        //Error handle
-        if (!args.length || args == '') {
-            embed.setTitle('Usage');
-            let str = ['-lobby host|boss|game name', '-lobby unhost', '-lobby rmk|loots'];
-            embed.setDescription(str.join("\n"));
-            embed.setColor("477692");
+        switch (args[0]) {
+            case 'host':
+                let bossSearch = args[1];
 
-            return sendEx(message, embed);
-        }
+                //Error Handling
+                if (bossSearch.length < 3) {
+                    embed.setDescription("You need three or more letters to continue your search!");
+                    embed.setColor("A22C2C");
+                    return sendEx(message, embed)
+                        .then(message => {
+                            message.delete({ timeout: 5000 })
+                        });
+                } else if (args[2] == null) {
+                    embed.setDescription("You need a game name!");
+                    embed.setColor("A22C2C");
+                    return sendEx(message, embed)
+                        .then(message => {
+                            message.delete({ timeout: 5000 })
+                        });
+                }
 
-        //unhost
-        if (args[0] === 'unhost') {
-            result = await Lobby.findByPk(userId);
-            if (result === null) {
-                message.channel.send('You have not host any lobby yet.');
-            } else {
-                message.channel.send(`unhosting ${result.gamename}`)
-                    .then(message => {
-                        message.delete({ timeout: 5000 })
-                    });
-                messageId = result.messageId;
-                lobby = result.lobby;
-                lobby.status = 'unhosted';
-                lobby.note = 'Thanks everyone for coming';
-                slots = result.slots;
+                let items = JSON.parse(fs.readFileSync('./twrpg-info/items.json', 'utf-8'));
+                let boss = fuseSearch(bosses, bossSearch, "name");
 
-                //delete old message
-                message.channel.messages.fetch(messageId)
-                    .then(message => {
-                        message.delete();
-                    });
+                if (boss.length > 0) {
+                    lobby.title = boss[0].name;
+                    lobby.gameName = args[2];
+                    lobby.bot = args[3] == null ? '' : args[3];
+                    lobby.rule = args[4] == null ? "#rules" : args[4];
+                    lobby.note = args[5] == null ? "Don't Die" : args[5];
+                    lobby.status = 'waiting';
+                    lobby.drops = []
+                    //Slots
+                    if (boss[0].drops) {
+                        for (let i = 0; i < boss[0].drops.length; i++) {
+                            let drop_id = boss[0].drops[i]
+                            let drop = fuseSearch(items, drop_id, "id");
+                            let capacity = 1;
 
-                await result.destroy();
-            }
-        }
-
-        //rmk
-        if (args[0] === 'rmk') {
-            result = await Lobby.findByPk(userId);
-            if (result === null) {
-                message.channel.send('You have not host any lobby yet.');
-            } else {
-                message.channel.send(`remaking ${result.gamename}`)
-                    .then(message => {
-                        message.delete({ timeout: 5000 })
-                    });
-                messageId = result.messageId;
-                lobby = result.lobby;
-                lobby.status = 'remaking(waiting)';
-                lobby.drops.push(args[1] == null ? 'Air' : args[1]);
-                slots = result.slots;
-
-                await Lobby.update({
-                    lobby
-                }, {
-                    where: {
-                        userId
-                    }
-                });
-
-                //delete old message
-                message.channel.messages.fetch(messageId)
-                    .then(message => {
-                        message.delete();
-                    });
-            }
-        }
-
-        //host
-        if (args[0] === 'host') {
-            let bossSearch = args[1];
-
-            if (bossSearch.length < 3) {
-                embed.setDescription("You need three or more letters to continue your search!");
-                embed.setColor("A22C2C");
-                return sendEx(message, embed);
-            }
-
-            let items = JSON.parse(fs.readFileSync('./twrpg-info/items.json', 'utf-8'));
-            let boss = searchBoss(bossSearch, bosses);
-
-            if (boss.length > 0) {
-                lobby.title = boss[0].name;
-                lobby.gamename = args[2];
-                lobby.rule = "#rules";
-                lobby.note = "Don't Die";
-                lobby.status = 'waiting';
-                lobby.drops = []
-                //Slots
-                if (boss[0].drops) {
-                    for (let i = 0; i < boss[0].drops.length; i++) {
-                        let drop_id = boss[0].drops[i]
-                        let drop = searchItem(drop_id, items);
-                        let capacity = 1;
-
-                        //slot cap
-                        if (drop[0].type === '[Material]' && drop[0].name != 'Coin of Effort') {
-                            capacity = 2;
+                            //slot cap
+                            if (drop[0].type === '[Material]' && drop[0].name != 'Coin of Effort') {
+                                capacity = 2;
+                            } else {
+                                capacity = 1;
+                            }
+                            slots.push({ dropId: drop_id, emoteId: drop[0].emote_id, name: drop[0].name, capacity, users: [] });
                         }
-                        slots.push({ dropId: drop_id, emoteId: drop[0].emote_id, name: drop[0].name, capacity: 1, users: [] });
                     }
                 }
-            }
-            else {
-                embed.setDescription(`**${bossSearch}** was not found in the boss list\n**__HINT: If you do not know a boss's name, you can type -boss by itself to get a list of all bosses__**`);
-                embed.setColor("A22C2C");
+                else {
+                    embed.setDescription(`**${bossSearch}** was not found in the boss list\n**__HINT: If you do not know a boss's name, you can type -boss by itself to get a list of all bosses__**`);
+                    embed.setColor("A22C2C");
+                    return sendEx(message, embed);
+                }
+                break;
+            case 'start':
+                result = await Lobby.findByPk(userId);
+                if (result === null) {
+                    return message.channel.send('You have not host any lobby yet.');
+                } else {
+                    message.channel.send(`starting ${result.lobby.gameName}`)
+                        .then(message => {
+                            message.delete({ timeout: 5000 })
+                        });
+                    messageId = result.messageId;
+                    lobby = result.lobby;
+                    lobby.status = 'started';
+                    slots = result.slots;
+
+                    await Lobby.update({
+                        lobby
+                    }, {
+                        where: {
+                            userId
+                        }
+                    });
+
+                    //delete old message
+                    message.channel.messages.fetch(messageId)
+                        .then(message => {
+                            message.delete();
+                        });
+                }
+                break;
+            case 'rmk':
+                result = await Lobby.findByPk(userId);
+                if (result === null) {
+                    return message.channel.send('You have not host any lobby yet.');
+                } else {
+                    messageId = result.messageId;
+                    lobby = result.lobby;
+                    lobby.status = 'remaking(waiting)';
+                    lobby.drops.push(args[1] == null ? 'Air' : args[1]);
+                    slots = result.slots;
+
+
+                    //delete old message
+                    message.channel.messages.fetch(messageId)
+                        .then(message => {
+                            message.delete();
+                        });
+
+                    //mention not ingame players to join
+                    let str = [];
+                    const notInGame = fuseSearch(slots, "false", "users.ingame");
+                    notInGame.forEach(element => {
+                        element.users.forEach(user =>{
+                            user.ingame = "true";
+                            str.push(` <@${user.userId}>`)
+                        })
+                    })
+
+                    message.channel.send(`remaking ${result.lobby.gameName}${str}`);
+                    
+                    //update lobby
+                    await Lobby.update({
+                        lobby,
+                        slots
+                    }, {
+                        where: {
+                            userId
+                        }
+                    });
+                }
+                break;
+            case 'unhost':
+                result = await Lobby.findByPk(userId);
+                if (result === null) {
+                    return message.channel.send('You have not host any lobby yet.');
+                } else {
+                    message.channel.send(`unhosting ${result.lobby.gameName}`)
+                        .then(message => {
+                            message.delete({ timeout: 5000 })
+                        });
+                    messageId = result.messageId;
+                    lobby = result.lobby;
+                    lobby.status = 'unhosted';
+                    lobby.drops.push(args[1] == null ? 'Air' : args[1]);
+                    lobby.note = args[2] == null ? 'Thanks everyone for coming' : args[2];
+                    slots = result.slots;
+
+                    await Lobby.update({
+                        lobby
+                    }, {
+                        where: {
+                            userId
+                        }
+                    });
+
+                    //delete old message
+                    message.channel.messages.fetch(messageId)
+                        .then(message => {
+                            message.delete();
+                        });
+
+                    await result.destroy();
+                }
+                break;
+            case 'join':
+                if (!message.mentions) {
+                    embed.setDescription('Please mention which host');
+                    embed.setColor("A22C2C");
+                    return sendEx(message, embed)
+                        .then(message => {
+                            message.delete({ timeout: 5000 })
+                        });
+                }
+                let mention = message.mentions.users.first()
+                result = await Lobby.findByPk(mention.id);
+                if (result === null) {
+                    embed.setDescription(`${mention.username} has not host any lobby`);
+                    embed.setColor("A22C2C");
+                    return sendEx(message, embed)
+                        .then(message => {
+                            message.delete({ timeout: 5000 })
+                        });
+                } else {
+                    messageId = result.messageId;
+                    lobby = result.lobby;
+                    slots = result.slots;
+                    let inSlot = fuseSearch(slots, userId, "users.userId")
+                    let item = fuseSearch(slots, args[2], "name");
+                    slots.forEach(element => {
+                        if (element.dropId === item[0].dropId) {
+                            //Error handling
+                            if (element.users.length >= element.capacity) {
+                                embed.setDescription(`${element.name} is full`);
+                                embed.setColor("A22C2C");
+                                return sendEx(message, embed)
+                                    .then(message => {
+                                        message.delete({ timeout: 5000 })
+                                    });
+                            } else if (inSlot.length) {
+                                embed.setDescription(`Already in slot ${inSlot[0].name}`);
+                                embed.setColor("A22C2C");
+                                return sendEx(message, embed)
+                                    .then(message => {
+                                        message.delete({ timeout: 5000 })
+                                    });
+                            }
+                            element.users.push({ userId, userName: message.author.tag, ingame: "false" })
+
+                            //send success message
+                            embed.setDescription(`joining ${result.lobby.gameName}`);
+                            embed.setColor("477692");
+                            sendEx(message, embed)
+                                .then(message => {
+                                    message.delete({ timeout: 5000 })
+                                });
+                        }
+                    })
+
+                    await Lobby.update({
+                        slots
+                    }, {
+                        where: {
+                            userId:mention.id
+                        }
+                    });
+
+                    //delete old message
+                    message.channel.messages.fetch(messageId)
+                        .then(message => {
+                            message.delete();
+                        });
+                }
+                break;
+            default: //Error Handling
+                embed.setTitle('Usage');
+                let str = ['-lobby host|boss|game name|bot|rules|notes', '-lobby unhost|loots|notes', '-lobby rmk|loots', '-lobby start', '-lobby join|@user|slot'];
+                embed.setDescription(str.join("\n"));
+                embed.setColor("477692");
+
                 return sendEx(message, embed);
-            }
+                break;
         }
 
         //message output
-        description = `\`\`\`Host: ${lobby.host}\nGame Name: ${lobby.gamename}\nRules: ${lobby.rule}\nNotes: ${lobby.note}\nStatus: ${lobby.status}\`\`\``
+        description = `\`\`\`Host: ${lobby.host}\nGame Name: ${lobby.gameName}\nBot: ${lobby.bot}\nRules: ${lobby.rule}\nNotes: ${lobby.note}\nStatus: ${lobby.status}\`\`\``
         embed.setTitle(lobby.title);
         embed.setDescription(description);
         embed.setColor("477692");
         embed.setTimestamp();
         slots.forEach(element => {
-            content.push(`<:${element.dropId}:${element.emoteId}>\`` + element.name.padEnd(30, ' ') + `[${element.users.length}/${element.capacity}]\``);
+            let players = '';
+            element.users.forEach(player => {
+                players += ` ${player.userName}`
+            })
+            content.push(`<:${element.dropId}:${element.emoteId}>\`` + element.name.padEnd(30, ' ') + `[${element.users.length}/${element.capacity}]${players}\``);
         });
 
         embed.addField("Slots:", content, false);
@@ -188,25 +319,24 @@ module.exports = {
             })
         }
 
-        //send embed
-        if (created || args[0] === 'rmk' || args[0] === 'unhost') {
+        //send embed message
+        if (created || args[0] === 'rmk' || args[0] === 'unhost' || args[0] === 'start' || args[0] === 'join') {
             const embedMessage = await sendEx(message, embed, '<a:740300330490921042:771395031206330428>')
             result.messageId = embedMessage.id;
-            result.guildId = embedMessage.guild.id;
             await result.save();
         }
         else {
             message.channel.send('Already created one lobby, please \"-host unhost\" it first')
-            .then(message => {
-                message.delete({timeout:5000})
-            });
+                .then(message => {
+                    message.delete({ timeout: 5000 })
+                });
         }
 
         return;
     }
 }
 
-function searchBoss(bossSearch, bosses) {
+function fuseSearch(Haystack, Needle, Keys) {
     let options = {
         shouldSort: true,
         matchAllTokens: true,
@@ -216,26 +346,10 @@ function searchBoss(bossSearch, bosses) {
         distance: 10,
         maxPatternLength: 32,
         minMatchCharLength: 3,
-        keys: ["name"]
+        keys: [Keys]
     };
-    let fuse = new Fuse(bosses, options);
-    return fuse.search(bossSearch);
-}
-
-function searchItem(itemSearch, items) {
-    let options = {
-        shouldSort: true,
-        matchAllTokens: true,
-        tokenize: true,
-        threshold: 0.1,
-        location: 1,
-        distance: 10,
-        maxPatternLength: 32,
-        minMatchCharLength: 3,
-        keys: ["id"]
-    };
-    let fuse = new Fuse(items, options);
-    return fuse.search(itemSearch);
+    let fuse = new Fuse(Haystack, options);
+    return fuse.search(Needle);
 }
 
 async function sendEx(message, embed, content = '') {
