@@ -10,6 +10,12 @@ module.exports = class Lobby extends Model {
             messageId: {
                 type: DataTypes.STRING
             },
+            guildId: {
+                type: DataTypes.STRING
+            },
+            channelId: {
+                type: DataTypes.STRING
+            },
             lobby: {
                 type: DataTypes.JSON
             },

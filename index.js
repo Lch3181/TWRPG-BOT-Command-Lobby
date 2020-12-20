@@ -37,7 +37,7 @@ client.on('message', async message => {
 
     switch (command) {
         case 'lobby':
-            client.commands.get('lobby').execute(message, args, Lobby);
+            client.commands.get('lobby').execute(client, message, args, Lobby);
             break;
         default:
             console.log('undefinded command: ' + command);

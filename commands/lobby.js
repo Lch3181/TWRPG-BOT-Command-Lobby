@@ -33,21 +33,40 @@ module.exports = {
     name: 'lobby',
     description: "for game lobby hosting template",
     usage: '<boss name>',
-    async execute(message, args, Lobby) {
+    async execute(client, message, args, Lobby) {
         let embed = new Discord.MessageEmbed();
         let bosses = JSON.parse(fs.readFileSync('./twrpg-info/bosses.json', 'utf-8'));
         var args = args.split('|').map(x => x.trim());
         let content = [];
         let description = '';
         let userId = message.author.id;
-        let mention
+        let mention;
         let messageId = "";
+        let guildId = message.guild.id;
+        let channelId = message.channel.id;
         let lobby = { host: message.author.tag };
         let slots = [];
         let result, created;
 
         //purge user command
         //message.delete({ timeout: 5000 });
+
+        //limit users only can apply commands on the same server that lobby was created
+        result = await Lobby.findOne({
+            where: {
+                userId
+            }
+        });
+        if (result !== null && args[0] !== 'unhost') {
+            if (result.guildId !== guildId || result.channelId !== channelId) {
+                embed.setDescription("Please send command in the same server and channel where you created that lobby or -lobby unhost");
+                embed.setColor("A22C2C");
+                return sendEx(message, embed)
+                    .then(message => {
+                        message.delete({ timeout: 5000 })
+                    });
+            }
+        }
 
         switch (args[0]) {
             case 'host':
@@ -215,7 +234,7 @@ module.exports = {
                     });
 
                     //delete old message
-                    message.channel.messages.fetch(messageId)
+                    client.guilds.cache.get(result.guildId).channels.cache.get(result.channelId).messages.fetch(messageId)
                         .then(message => {
                             message.delete();
                         });
@@ -325,11 +344,11 @@ module.exports = {
                                 message.delete({ timeout: 5000 })
                             });
                     }
-                    
+
                     //remove user from slot
                     slots.forEach(element => {
                         if (element.dropId === inSlot[0].dropId) {
-                            var index = element.users.findIndex(function(item, i){
+                            var index = element.users.findIndex(function (item, i) {
                                 return item.userId === userId
                             });
                             element.users.splice(index, 1);
@@ -398,9 +417,14 @@ module.exports = {
                 .then(message => {
                     message.delete({ timeout: 5000 })
                 });
+        } else if (args[0] === 'unhost'){
+            //send to old server&channel
+            await client.guilds.cache.get(result.guildId).channels.cache.get(result.channelId).send('<a:740300330490921042:771395031206330428>', embed);
         } else {
             const embedMessage = await sendEx(message, embed, '<a:740300330490921042:771395031206330428>')
             result.messageId = embedMessage.id;
+            result.guildId = embedMessage.guild.id;
+            result.channelId = embedMessage.channel.id;
             await result.save();
         }
 
