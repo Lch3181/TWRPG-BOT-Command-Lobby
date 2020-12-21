@@ -29,7 +29,7 @@ client.once('ready', () => {
 
 client.on('message', async message => {
     if (!message.content.startsWith(prefix) || message.author.bot) return;
-    //console.log(message.mentions);
+    console.log(message.content);
 
     const input = message.content.slice(prefix.length).trim().split(' ');
     const command = input.shift();

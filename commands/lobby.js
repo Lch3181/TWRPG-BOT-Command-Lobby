@@ -179,6 +179,7 @@ module.exports = {
                         });
                 }
                 break;
+            case 'remake':
             case 'rmk':
                 result = await Lobby.findByPk(userId);
                 if (result === null) {
@@ -417,13 +418,107 @@ module.exports = {
                         });
                 }
                 break;
-            case 'kick':
+            case 'vanquish':
+            case 'remove':
+                //Error Handling
+                if (!message.mentions) {
+                    embed.setDescription('Please mention which player');
+                    embed.setColor("A22C2C");
+                    return sendEx(message, embed)
+                        .then(message => {
+                            message.delete({ timeout: 5000 })
+                        });
+                } else if (args.length < 2) {
+                    embed.setDescription('Not enough arguements. Check with -lobby');
+                    embed.setColor("A22C2C");
+                    return sendEx(message, embed)
+                        .then(message => {
+                            message.delete({ timeout: 5000 })
+                        });
+                }
+                let mentions = message.mentions.users;
+
+                result = await Lobby.findByPk(userId);
+                if (result === null) {
+                    embed.setDescription(`You have not host any lobby`);
+                    embed.setColor("A22C2C");
+                    return sendEx(message, embed)
+                        .then(message => {
+                            message.delete({ timeout: 5000 })
+                        });
+                } else {
+                    messageId = result.messageId;
+                    lobby = result.lobby;
+                    slots = result.slots;
+                    mentions.each(mention => {
+                        let inSlot = fuseSearch(slots, mention.id, "users.userId")
+                        //Error handling
+                        if (!inSlot.length) {
+                            embed.setDescription(`${mention.tag} is not in any slot`);
+                            embed.setColor("A22C2C");
+                            return sendEx(message, embed)
+                                .then(message => {
+                                    message.delete({ timeout: 5000 })
+                                });
+                        }
+
+                        //remove user from slot
+                        slots.forEach(element => {
+                            if (element.dropId === inSlot[0].dropId) {
+                                var index = element.users.findIndex(function (item) {
+                                    return item.userId === mention.id
+                                });
+                                element.users.splice(index, 1);
+                                //send success message
+                                embed.setDescription(`removing ${mention.tag} in slot ${element.name}`);
+                                embed.setColor("477692");
+                                sendEx(message, embed)
+                                    .then(message => {
+                                        message.delete({ timeout: 5000 })
+                                    });
+                            }
+                        })
+                    })
+
+
+                    //update lobby
+                    await Lobby.update({
+                        slots
+                    }, {
+                        where: {
+                            userId
+                        }
+                    });
+
+                    //delete old message
+                    message.channel.messages.fetch(messageId)
+                        .then(message => {
+                            message.delete();
+                        });
+                }
+                break;
+            case 'show':
+            case 'reload':
+            case 'status':
+                //Error handling
+                if (result == null) {
+                    embed.setDescription('You have not host any lobby yet.');
+                    embed.setColor("A22C2C");
+                    return sendEx(message, embed)
+                        .then(message => {
+                            message.delete({ timeout: 5000 })
+                        });
+                } else {
+                    lobby = result.lobby
+                    slots = result.slots
+                }
                 break;
             default: //Error Handling
                 embed.setTitle('Usage');
-                let str = ['-lobby host|boss|game name|bot|rules|notes', '-lobby unhost|loots|notes',
-                    '-lobby start', '-lobby rmk|loots', '-lobby join|@mention|slot', '-lobby leave|@mention',
-                    '-lobby kick|@mention(s)'];
+                let str = ['Some have default value with an equal sign (you can skip those arugements)', '-lobby host|boss|game name|bot=Empty|rules=#rules|notes=Don\'t Die',
+                    '-lobby unhost|loots=Air|notes=Thanks for coming',
+                    '-lobby start', '-lobby remake(rmk)|loots=Air', '-lobby join|@mention|slot', '-lobby leave|@mention',
+                    '-lobby remove|@mention(s)', '-lobby show(status/reload)'];
                 embed.setDescription(str.join("\n"));
                 embed.setColor("477692");
 
@@ -457,6 +552,7 @@ module.exports = {
         if (!created && args[0] === 'host') {
             embed.setDescription('Already created one lobby, please \"-host unhost\" it first');
             embed.setColor("A22C2C");
+            embed.fields = [];
             return sendEx(message, embed)
                 .then(message => {
                     message.delete({ timeout: 5000 })
