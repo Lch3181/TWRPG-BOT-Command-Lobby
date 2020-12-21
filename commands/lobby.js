@@ -11,22 +11,35 @@ module.exports = {
         let bosses = JSON.parse(fs.readFileSync('./twrpg-info/bosses.json', 'utf-8'));
         var args = args.split('|').map(x => x.trim());
         let content = [];
-        let description = '';
         let userId = message.author.id;
-        let mention;
+        let mention = message.mentions ? message.mentions.users.first() : null;
         let messageId = "";
         let guildId = message.guild.id;
         let channelId = message.channel.id;
-        let lobby = { host: message.author.tag, mentions:[]};
+        let lobby = { host: message.author.tag, mentions: [] };
         let slots = [];
+        let inSlot = [];
         let result, created;
         let str = [];
 
         //purge user command
         //message.delete({ timeout: 5000 });
 
+        // get data
         //limit users only can apply commands on the same server that lobby was created
-        result = await Lobby.findByPk(userId);
+        if (args[0] === 'join' || args[0] === 'leave' && mention) {
+            result = await Lobby.findByPk(mention.id);
+        } else if (args[0] === 'join' || args[0] === 'leave' && !mention) {
+            embed.setDescription('Please mention which host');
+            embed.setColor("A22C2C");
+            return sendEx(message, embed)
+                .then(message => {
+                    message.delete({ timeout: 5000 })
+                });
+        } else {
+            result = await Lobby.findByPk(userId);
+        }
+
         if (result !== null && args[0] !== 'unhost') {
             if (result.guildId !== guildId || result.channelId !== channelId) {
                 embed.setDescription("Please send command in the same server and channel where you created that lobby or -lobby unhost");
@@ -36,14 +49,18 @@ module.exports = {
                         message.delete({ timeout: 5000 })
                     });
             }
-        } else if (result == null && args[0] !== 'host' && args[0] !== 'help'&& args[0] !== 'join' && args[0] !== 'leave') {
+        } else if (result == null && args[0] !== 'host' && args[0] !== 'help') {
             embed.setDescription('You have not host any lobby. Please check -lobby help');
+            if (args[0] == 'join' && args[0] == 'leave') {
+                embed.setDescription(`${mention.tag} has not host any lobby. Please check -lobby help`);
+            }
             embed.setColor("A22C2C");
             return sendEx(message, embed)
                 .then(message => {
                     message.delete({ timeout: 5000 })
                 });
         }
+
         if (result !== null) {
             messageId = result.messageId;
             guildId = result.guildId;
@@ -198,7 +215,7 @@ module.exports = {
 
                 break;
             case 'unhost':
-                message.channel.send(`unhosting ${result.lobby.gameName}`)
+                message.channel.send(`unhosting ${lobby.gameName}`)
                     .then(message => {
                         message.delete({ timeout: 5000 })
                     });
@@ -215,23 +232,16 @@ module.exports = {
                     }
                 });
 
+                await result.destroy();
+
                 //delete old message
-                client.guilds.cache.get(result.guildId).channels.cache.get(result.channelId).messages.fetch(messageId)
+                client.guilds.cache.get(guildId).channels.cache.get(channelId).messages.fetch(messageId)
                     .then(message => {
                         message.delete();
                     });
-
-                await result.destroy();
                 break;
             case 'join':
-                if (!message.mentions) {
-                    embed.setDescription('Please mention which host');
-                    embed.setColor("A22C2C");
-                    return sendEx(message, embed)
-                        .then(message => {
-                            message.delete({ timeout: 5000 })
-                        });
-                } else if (args.length < 3) {
+                if (args.length < 3) {
                     embed.setDescription('Not enough arguements. Check with -lobby');
                     embed.setColor("A22C2C");
                     return sendEx(message, embed)
@@ -239,133 +249,98 @@ module.exports = {
                             message.delete({ timeout: 5000 })
                         });
                 }
-                mention = message.mentions.users.first()
-                if (result === null) {
-                    embed.setDescription(`${mention.username} has not host any lobby`);
-                    embed.setColor("A22C2C");
-                    return sendEx(message, embed)
-                        .then(message => {
-                            message.delete({ timeout: 5000 })
-                        });
-                } else {
-                    let inSlot = fuseSearch(slots, userId, "users.userId")
-                    let item = fuseSearch(slots, args[2], "name");
-                    slots.forEach(element => {
-                        if (element.dropId === item[0].dropId) {
-                            //Error handling
-                            if (element.users.length >= element.capacity) {
-                                embed.setDescription(`${element.name} is full`);
-                                embed.setColor("A22C2C");
-                                return sendEx(message, embed)
-                                    .then(message => {
-                                        message.delete({ timeout: 5000 })
-                                    });
-                            } else if (inSlot.length) {
-                                embed.setDescription(`Already in slot ${inSlot[0].name}`);
-                                embed.setColor("A22C2C");
-                                return sendEx(message, embed)
-                                    .then(message => {
-                                        message.delete({ timeout: 5000 })
-                                    });
-                            }
-                            let ingame = lobby.status.includes('waiting') ? "true" : "false";
-                            element.users.push({ userId, userName: message.author.tag, ingame })
-
-                            //send success message
-                            embed.setDescription(`joining ${result.lobby.gameName} slot ${item[0].name}`);
-                            embed.setColor("477692");
-                            sendEx(message, embed)
+                inSlot = fuseSearch(slots, userId, "users.userId")
+                let item = fuseSearch(slots, args[2], "name");
+                slots.forEach(element => {
+                    if (element.dropId === item[0].dropId) {
+                        //Error handling
+                        if (element.users.length >= element.capacity) {
+                            embed.setDescription(`${element.name} is full`);
+                            embed.setColor("A22C2C");
+                            return sendEx(message, embed)
+                                .then(message => {
+                                    message.delete({ timeout: 5000 })
+                                });
+                        } else if (inSlot.length) {
+                            embed.setDescription(`Already in slot ${inSlot[0].name}`);
+                            embed.setColor("A22C2C");
+                            return sendEx(message, embed)
                                 .then(message => {
                                     message.delete({ timeout: 5000 })
                                 });
                         }
-                    })
+                        let ingame = lobby.status.includes('waiting') ? "true" : "false";
+                        element.users.push({ userId, userName: message.author.tag, ingame })
 
-                    await Lobby.update({
-                        slots
-                    }, {
-                        where: {
-                            userId: mention.id
-                        }
-                    });
-
-                    //delete old message
-                    message.channel.messages.fetch(messageId)
-                        .then(message => {
-                            message.delete();
-                        });
-                }
-                break;
-            case 'leave':
-                //Error Handling
-                if (!message.mentions) {
-                    embed.setDescription('Please mention which host');
-                    embed.setColor("A22C2C");
-                    return sendEx(message, embed)
-                        .then(message => {
-                            message.delete({ timeout: 5000 })
-                        });
-                } else if (args.length < 2) {
-                    embed.setDescription('Not enough arguements. Check with -lobby');
-                    embed.setColor("A22C2C");
-                    return sendEx(message, embed)
-                        .then(message => {
-                            message.delete({ timeout: 5000 })
-                        });
-                }
-                mention = message.mentions.users.first()
-                result = await Lobby.findByPk(mention.id);
-                if (result === null) {
-                    embed.setDescription(`${mention.username} has not host any lobby`);
-                    embed.setColor("A22C2C");
-                    return sendEx(message, embed)
-                        .then(message => {
-                            message.delete({ timeout: 5000 })
-                        });
-                } else {
-                    let inSlot = fuseSearch(slots, userId, "users.userId")
-                    //Error handling
-                    if (!inSlot.length) {
-                        embed.setDescription(`You are not in any slot`);
-                        embed.setColor("A22C2C");
-                        return sendEx(message, embed)
+                        //send success message
+                        embed.setDescription(`joining ${result.lobby.gameName} slot ${item[0].name}`);
+                        embed.setColor("477692");
+                        sendEx(message, embed)
                             .then(message => {
                                 message.delete({ timeout: 5000 })
                             });
                     }
+                })
 
-                    //remove user from slot
-                    slots.forEach(element => {
-                        if (element.dropId === inSlot[0].dropId) {
-                            var index = element.users.findIndex(function (item) {
-                                return item.userId === userId
-                            });
-                            element.users.splice(index, 1);
-                            //send success message
-                            embed.setDescription(`leaving ${result.lobby.gameName} slot ${element.name}`);
-                            embed.setColor("477692");
-                            sendEx(message, embed)
-                                .then(message => {
-                                    message.delete({ timeout: 5000 })
-                                });
-                        }
-                    })
+                await Lobby.update({
+                    slots
+                }, {
+                    where: {
+                        userId: mention.id
+                    }
+                });
 
-                    //update lobby
-                    await Lobby.update({
-                        slots
-                    }, {
-                        where: {
-                            userId: mention.id
-                        }
+                //delete old message
+                message.channel.messages.fetch(messageId)
+                    .then(message => {
+                        message.delete();
                     });
 
-                    //delete old message
-                    message.channel.messages.fetch(messageId)
+                break;
+            case 'leave':
+                inSlot = fuseSearch(slots, userId, "users.userId")
+                //Error handling
+                if (!inSlot.length) {
+                    embed.setDescription(`You are not in any slot`);
+                    embed.setColor("A22C2C");
+                    return sendEx(message, embed)
                         .then(message => {
-                            message.delete();
+                            message.delete({ timeout: 5000 })
                         });
                 }
+
+                //remove user from slot
+                slots.forEach(element => {
+                    if (element.dropId === inSlot[0].dropId) {
+                        var index = element.users.findIndex(function (item) {
+                            return item.userId === userId
+                        });
+                        element.users.splice(index, 1);
+                        //send success message
+                        embed.setDescription(`leaving ${result.lobby.gameName} slot ${element.name}`);
+                        embed.setColor("477692");
+                        sendEx(message, embed)
+                            .then(message => {
+                                message.delete({ timeout: 5000 })
+                            });
+                    }
+                })
+
+                //update lobby
+                await Lobby.update({
+                    slots
+                }, {
+                    where: {
+                        userId: mention.id
+                    }
+                });
+
+                //delete old message
+                message.channel.messages.fetch(messageId)
+                    .then(message => {
+                        message.delete();
+                    });
+
                 break;
             case 'vanquish':
             case 'remove':
@@ -388,7 +363,7 @@ module.exports = {
                 let mentions = message.mentions.users;
 
                 mentions.each(mention => {
-                    let inSlot = fuseSearch(slots, mention.id, "users.userId")
+                    inSlot = fuseSearch(slots, mention.id, "users.userId")
                     //Error handling
                     if (!inSlot.length) {
                         embed.setDescription(`${mention.tag} is not in any slot`);
@@ -433,21 +408,21 @@ module.exports = {
                         message.delete();
                     });
                 break;
-            case 'show':
-            case 'reload':
-            case 'status':
+            case 'add':
                 break;
             case 'help':
-                embed.setTitle('Usage');
-                str = ['Some have default value with an equal sign (you can skip those arugements)', 
-                    '-lobby host|boss|game name|@mention(s) or @role(s)|bot=Empty|realm=Empty|rules=#rules|notes=Don\'t Die',
+                embed.setTitle('-lobby usage');
+                str = ['Some have default value with an equal sign (you can skip those arugements)',
+                    ' __**lobby owner only:**__ ',
+                    '-lobby host|boss|game name|@mention(s) or @role(s)|bot=|realm=|rules=#rules|notes=Don\'t Die',
                     '-lobby unhost|loots=Air|notes=Thanks for coming',
-                    '-lobby start', 
-                    '-lobby remake(rmk)|loots=Air', 
-                    '-lobby join|@mention|slot', 
-                    '-lobby leave|@mention',
-                    '-lobby remove|@mention(s)', 
-                    '-lobby show(status/reload)'];
+                    '-lobby start',
+                    '-lobby remake(rmk)|loots=Air',
+                    '-lobby remove|@mention(s)',
+                    '-lobby add|@mention slot|@mention slot|...',
+                    ' __**Anyone:**__ ',
+                    '-lobby join|@mention|slot',
+                    '-lobby leave|@mention'];
                 embed.setDescription(str.join("\n"));
                 embed.setColor("477692");
 
@@ -456,14 +431,15 @@ module.exports = {
         }
 
         //message output
+        embed.setDescription('');
         lobby.mentions.forEach(mention => {
-            description += ' ' + mention;
+            embed.setDescription(`${embed.description} ${mention}`);
         });
-        description += `\n\`\`\`Boss:   ${lobby.title}\nBot:    ${lobby.bot}\nRealm:  ${lobby.realm}\nRules:  ${lobby.rule}\nNotes:  ${lobby.note}\nStatus: ${lobby.status}\`\`\``
+        embed.setDescription(`${embed.description}\n\`\`\`Boss:   ${lobby.title}\nBot:    ${lobby.bot}\nRealm:  ${lobby.realm}\nRules:  ${lobby.rule}\nNotes:  ${lobby.note}\nStatus: ${lobby.status}\`\`\``);
         embed.setAuthor(`Host: ${message.author.tag}`);
-        embed.setThumbnail(`https://raw.githubusercontent.com/sfarmani/twicons/master/${lobby.title} Icon.jpg`.replace(/ /g, "%20"));
+        embed.attachFiles({ attachment: `./twicons/${lobby.title} Icon.jpg`, name:'Thumbnail.jpg'});
+        embed.setThumbnail(`attachment://Thumbnail.jpg`);
         embed.setTitle(`Game Name: ${lobby.gameName}`);
-        embed.setDescription(description);
         embed.setColor("477692");
         embed.setTimestamp();
         slots.forEach(element => {
@@ -480,6 +456,10 @@ module.exports = {
             embed.addField("Drops:", `\`\`\`${lobby.drops}\`\`\``, false);
         } else {
             embed.addField("Drops:", `\`\`\` \`\`\``, false);
+        }
+
+        if(lobby.status == 'unhosted') {
+            embed.setTitle(`~~${embed.title}~~`);
         }
 
         //send embed message
