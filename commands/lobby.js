@@ -1,33 +1,7 @@
 const fs = require('fs');
 const Fuse = require('fuse.js');
 const Discord = require('discord.js');
-/*{
-    "userId": "",
-    "guildId": "",
-    "messageId": "",
-    "lobby": {
-        "host": "",
-        "gameName": "",
-        "bot":"",
-        "rule": "",
-        "note":"",
-        "status": "",
-        "drops": []
-    },
-    "slots": [{
-        "I0D2": {
-            "emoteId": "",
-            "dropId":"",
-            "name": "Embrace of Nature",
-            "capacity": 1,
-            "users": [{
-                "player1": [{
-        "userId": "227956824521834500",
-        "userName": "Lch#3181",
-        "ingame": "false"
-            }]
-    }]
-}*/
+
 module.exports = {
     name: 'lobby',
     description: "for game lobby hosting template",
@@ -46,16 +20,13 @@ module.exports = {
         let lobby = { host: message.author.tag };
         let slots = [];
         let result, created;
+        let str = [];
 
         //purge user command
         //message.delete({ timeout: 5000 });
 
         //limit users only can apply commands on the same server that lobby was created
-        result = await Lobby.findOne({
-            where: {
-                userId
-            }
-        });
+        result = await Lobby.findByPk(userId);
         if (result !== null && args[0] !== 'unhost') {
             if (result.guildId !== guildId || result.channelId !== channelId) {
                 embed.setDescription("Please send command in the same server and channel where you created that lobby or -lobby unhost");
@@ -65,6 +36,20 @@ module.exports = {
                         message.delete({ timeout: 5000 })
                     });
             }
+        } else if (result == null && args[0] !== 'host' && args[0] !== 'help'&& args[0] !== 'join' && args[0] !== 'leave') {
+            embed.setDescription('You have not host any lobby. Please check -lobby help');
+            embed.setColor("A22C2C");
+            return sendEx(message, embed)
+                .then(message => {
+                    message.delete({ timeout: 5000 })
+                });
+        }
+        if (result !== null) {
+            messageId = result.messageId;
+            guildId = result.guildId;
+            channelId = result.channelId;
+            lobby = result.lobby;
+            slots = result.slots;
         }
 
         switch (args[0]) {
@@ -146,126 +131,90 @@ module.exports = {
                 }
                 break;
             case 'start':
-                result = await Lobby.findByPk(userId);
-                if (result === null) {
-                    embed.setDescription('You have not host any lobby yet.');
-                    embed.setColor("A22C2C");
-                    return sendEx(message, embed)
-                        .then(message => {
-                            message.delete({ timeout: 5000 })
-                        });
-                } else {
-                    message.channel.send(`starting ${result.lobby.gameName}`)
-                        .then(message => {
-                            message.delete({ timeout: 5000 })
-                        });
-                    messageId = result.messageId;
-                    lobby = result.lobby;
-                    lobby.status = 'started';
-                    slots = result.slots;
-
-                    await Lobby.update({
-                        lobby
-                    }, {
-                        where: {
-                            userId
-                        }
+                message.channel.send(`starting ${lobby.gameName}`)
+                    .then(message => {
+                        message.delete({ timeout: 5000 })
                     });
 
-                    //delete old message
-                    message.channel.messages.fetch(messageId)
-                        .then(message => {
-                            message.delete();
-                        });
-                }
+                lobby.status = 'started';
+
+                await Lobby.update({
+                    lobby
+                }, {
+                    where: {
+                        userId
+                    }
+                });
+
+                //delete old message
+                message.channel.messages.fetch(messageId)
+                    .then(message => {
+                        message.delete();
+                    });
+
                 break;
             case 'remake':
             case 'rmk':
-                result = await Lobby.findByPk(userId);
-                if (result === null) {
-                    embed.setDescription('You have not host any lobby yet.');
-                    embed.setColor("A22C2C");
-                    return sendEx(message, embed)
-                        .then(message => {
-                            message.delete({ timeout: 5000 })
-                        });
-                } else {
-                    messageId = result.messageId;
-                    lobby = result.lobby;
-                    lobby.status = 'remaking(waiting)';
-                    lobby.drops.push(args[1] == null ? 'Air' : args[1]);
-                    slots = result.slots;
+                lobby.status = 'remaking(waiting)';
+                lobby.drops.push(args[1] == null ? 'Air' : args[1]);
 
-
-                    //delete old message
-                    message.channel.messages.fetch(messageId)
-                        .then(message => {
-                            message.delete();
-                        });
-
-                    //mention not ingame players to join
-                    let str = [];
-                    const notInGame = fuseSearch(slots, "false", "users.ingame");
-                    notInGame.forEach(element => {
-                        element.users.forEach(user => {
-                            user.ingame = "true";
-                            str.push(` <@${user.userId}>`)
-                        })
-                    })
-
-                    const output = await message.channel.send(`remaking ${result.lobby.gameName}${str}`);
-                    if (!str.length) {
-                        output.delete({ timeout: 5000 });
-                    }
-
-                    //update lobby
-                    await Lobby.update({
-                        lobby,
-                        slots
-                    }, {
-                        where: {
-                            userId
-                        }
+                //delete old message
+                message.channel.messages.fetch(messageId)
+                    .then(message => {
+                        message.delete();
                     });
+
+                //mention not ingame players to join
+
+                const notInGame = fuseSearch(slots, "false", "users.ingame");
+                notInGame.forEach(element => {
+                    element.users.forEach(user => {
+                        user.ingame = "true";
+                        str.push(` <@${user.userId}>`)
+                    })
+                })
+
+                const output = await message.channel.send(`remaking ${result.lobby.gameName}${str}`);
+                if (!str.length) {
+                    output.delete({ timeout: 5000 });
                 }
+
+                //update lobby
+                await Lobby.update({
+                    lobby,
+                    slots
+                }, {
+                    where: {
+                        userId
+                    }
+                });
+
                 break;
             case 'unhost':
-                result = await Lobby.findByPk(userId);
-                if (result === null) {
-                    embed.setDescription('You have not host any lobby yet.');
-                    embed.setColor("A22C2C");
-                    return sendEx(message, embed)
-                        .then(message => {
-                            message.delete({ timeout: 5000 })
-                        });
-                } else {
-                    message.channel.send(`unhosting ${result.lobby.gameName}`)
-                        .then(message => {
-                            message.delete({ timeout: 5000 })
-                        });
-                    messageId = result.messageId;
-                    lobby = result.lobby;
-                    lobby.status = 'unhosted';
-                    lobby.drops.push(args[1] == null ? 'Air' : args[1]);
-                    lobby.note = args[2] == null ? 'Thanks everyone for coming' : args[2];
-                    slots = result.slots;
-
-                    await Lobby.update({
-                        lobby
-                    }, {
-                        where: {
-                            userId
-                        }
+                message.channel.send(`unhosting ${result.lobby.gameName}`)
+                    .then(message => {
+                        message.delete({ timeout: 5000 })
                     });
 
-                    //delete old message
-                    client.guilds.cache.get(result.guildId).channels.cache.get(result.channelId).messages.fetch(messageId)
-                        .then(message => {
-                            message.delete();
-                        });
+                lobby.status = 'unhosted';
+                lobby.drops.push(args[1] == null ? 'Air' : args[1]);
+                lobby.note = args[2] == null ? 'Thanks everyone for coming' : args[2];
 
-                    await result.destroy();
-                }
+                await Lobby.update({
+                    lobby
+                }, {
+                    where: {
+                        userId
+                    }
+                });
+
+                //delete old message
+                client.guilds.cache.get(result.guildId).channels.cache.get(result.channelId).messages.fetch(messageId)
+                    .then(message => {
+                        message.delete();
+                    });
+
+                await result.destroy();
                 break;
             case 'join':
                 if (!message.mentions) {
@@ -284,7 +233,6 @@ module.exports = {
                         });
                 }
                 mention = message.mentions.users.first()
-                result = await Lobby.findByPk(mention.id);
                 if (result === null) {
                     embed.setDescription(`${mention.username} has not host any lobby`);
                     embed.setColor("A22C2C");
@@ -293,9 +241,6 @@ module.exports = {
                             message.delete({ timeout: 5000 })
                         });
                 } else {
-                    messageId = result.messageId;
-                    lobby = result.lobby;
-                    slots = result.slots;
                     let inSlot = fuseSearch(slots, userId, "users.userId")
                     let item = fuseSearch(slots, args[2], "name");
                     slots.forEach(element => {
@@ -371,9 +316,6 @@ module.exports = {
                             message.delete({ timeout: 5000 })
                         });
                 } else {
-                    messageId = result.messageId;
-                    lobby = result.lobby;
-                    slots = result.slots;
                     let inSlot = fuseSearch(slots, userId, "users.userId")
                     //Error handling
                     if (!inSlot.length) {
@@ -438,84 +380,59 @@ module.exports = {
                 }
                 let mentions = message.mentions.users;
 
-                result = await Lobby.findByPk(userId);
-                if (result === null) {
-                    embed.setDescription(`You have not host any lobby`);
-                    embed.setColor("A22C2C");
-                    return sendEx(message, embed)
-                        .then(message => {
-                            message.delete({ timeout: 5000 })
-                        });
-                } else {
-                    messageId = result.messageId;
-                    lobby = result.lobby;
-                    slots = result.slots;
-                    mentions.each(mention => {
-                        let inSlot = fuseSearch(slots, mention.id, "users.userId")
-                        //Error handling
-                        if (!inSlot.length) {
-                            embed.setDescription(`${mention.tag} is not in any slot`);
-                            embed.setColor("A22C2C");
-                            return sendEx(message, embed)
+                mentions.each(mention => {
+                    let inSlot = fuseSearch(slots, mention.id, "users.userId")
+                    //Error handling
+                    if (!inSlot.length) {
+                        embed.setDescription(`${mention.tag} is not in any slot`);
+                        embed.setColor("A22C2C");
+                        return sendEx(message, embed)
+                            .then(message => {
+                                message.delete({ timeout: 5000 })
+                            });
+                    }
+
+                    //remove user from slot
+                    slots.forEach(element => {
+                        if (element.dropId === inSlot[0].dropId) {
+                            var index = element.users.findIndex(function (item) {
+                                return item.userId === mention.id
+                            });
+                            element.users.splice(index, 1);
+                            //send success message
+                            embed.setDescription(`removing ${mention.tag} in slot ${element.name}`);
+                            embed.setColor("477692");
+                            sendEx(message, embed)
                                 .then(message => {
                                     message.delete({ timeout: 5000 })
                                 });
                         }
-
-                        //remove user from slot
-                        slots.forEach(element => {
-                            if (element.dropId === inSlot[0].dropId) {
-                                var index = element.users.findIndex(function (item) {
-                                    return item.userId === mention.id
-                                });
-                                element.users.splice(index, 1);
-                                //send success message
-                                embed.setDescription(`removing ${mention.tag} in slot ${element.name}`);
-                                embed.setColor("477692");
-                                sendEx(message, embed)
-                                    .then(message => {
-                                        message.delete({ timeout: 5000 })
-                                    });
-                            }
-                        })
                     })
+                })
 
 
-                    //update lobby
-                    await Lobby.update({
-                        slots
-                    }, {
-                        where: {
-                            userId
-                        }
+                //update lobby
+                await Lobby.update({
+                    slots
+                }, {
+                    where: {
+                        userId
+                    }
+                });
+
+                //delete old message
+                message.channel.messages.fetch(messageId)
+                    .then(message => {
+                        message.delete();
                     });
-
-                    //delete old message
-                    message.channel.messages.fetch(messageId)
-                        .then(message => {
-                            message.delete();
-                        });
-                }
                 break;
             case 'show':
             case 'reload':
             case 'status':
-                //Error handling
-                if (result == null) {
-                    embed.setDescription('You have not host any lobby yet.');
-                    embed.setColor("A22C2C");
-                    return sendEx(message, embed)
-                        .then(message => {
-                            message.delete({ timeout: 5000 })
-                        });
-                } else {
-                    lobby = result.lobby
-                    slots = result.slots
-                }
                 break;
-            default: //Error Handling
+            case 'help':
                 embed.setTitle('Usage');
-                let str = ['Some have default value with an equal sign (you can skip those arugements)', '-lobby host|boss|game name|bot=Empty|rules=#rules|notes=Don\'t Die',
+                str = ['Some have default value with an equal sign (you can skip those arugements)', '-lobby host|boss|game name|bot=Empty|rules=#rules|notes=Don\'t Die',
                     '-lobby unhost|loots=Air|notes=Thanks for coming',
                     '-lobby start', '-lobby remake(rmk)|loots=Air', '-lobby join|@mention|slot', '-lobby leave|@mention',
                     '-lobby remove|@mention(s)', '-lobby show(status/reload)'];
