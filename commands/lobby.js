@@ -17,7 +17,7 @@ module.exports = {
         let messageId = "";
         let guildId = message.guild.id;
         let channelId = message.channel.id;
-        let lobby = { host: message.author.tag };
+        let lobby = { host: message.author.tag, mentions:[]};
         let slots = [];
         let result, created;
         let str = [];
@@ -86,9 +86,16 @@ module.exports = {
                 if (boss.length > 0) {
                     lobby.title = boss[0].name;
                     lobby.gameName = args[2];
-                    lobby.bot = args[3] == null ? '' : args[3];
-                    lobby.rule = args[4] == null ? "#rules" : args[4];
-                    lobby.note = args[5] == null ? "Don't Die" : args[5];
+                    message.mentions.users.each(mention => {
+                        lobby.mentions.push(`<@!${mention.id}>`)
+                    });
+                    message.mentions.roles.each(role => {
+                        lobby.mentions.push(`<@&${role.id}>`)
+                    });
+                    lobby.bot = args[4] == null ? '' : args[4];
+                    lobby.realm = args[5] == null ? '' : args[5];
+                    lobby.rule = args[6] == null ? "#rules" : args[6];
+                    lobby.note = args[7] == null ? "Don't Die" : args[7];
                     lobby.status = 'waiting';
                     lobby.drops = []
                     //Slots
@@ -432,10 +439,15 @@ module.exports = {
                 break;
             case 'help':
                 embed.setTitle('Usage');
-                str = ['Some have default value with an equal sign (you can skip those arugements)', '-lobby host|boss|game name|bot=Empty|rules=#rules|notes=Don\'t Die',
+                str = ['Some have default value with an equal sign (you can skip those arugements)', 
+                    '-lobby host|boss|game name|@mention(s) or @role(s)|bot=Empty|realm=Empty|rules=#rules|notes=Don\'t Die',
                     '-lobby unhost|loots=Air|notes=Thanks for coming',
-                    '-lobby start', '-lobby remake(rmk)|loots=Air', '-lobby join|@mention|slot', '-lobby leave|@mention',
-                    '-lobby remove|@mention(s)', '-lobby show(status/reload)'];
+                    '-lobby start', 
+                    '-lobby remake(rmk)|loots=Air', 
+                    '-lobby join|@mention|slot', 
+                    '-lobby leave|@mention',
+                    '-lobby remove|@mention(s)', 
+                    '-lobby show(status/reload)'];
                 embed.setDescription(str.join("\n"));
                 embed.setColor("477692");
 
@@ -444,8 +456,13 @@ module.exports = {
         }
 
         //message output
-        description = `\`\`\`Host: ${lobby.host}\nGame Name: ${lobby.gameName}\nBot: ${lobby.bot}\nRules: ${lobby.rule}\nNotes: ${lobby.note}\nStatus: ${lobby.status}\`\`\``
-        embed.setTitle(lobby.title);
+        lobby.mentions.forEach(mention => {
+            description += ' ' + mention;
+        });
+        description += `\n\`\`\`Boss:   ${lobby.title}\nBot:    ${lobby.bot}\nRealm:  ${lobby.realm}\nRules:  ${lobby.rule}\nNotes:  ${lobby.note}\nStatus: ${lobby.status}\`\`\``
+        embed.setAuthor(`Host: ${message.author.tag}`);
+        embed.setThumbnail(`https://raw.githubusercontent.com/sfarmani/twicons/master/${lobby.title} Icon.jpg`.replace(/ /g, "%20"));
+        embed.setTitle(`Game Name: ${lobby.gameName}`);
         embed.setDescription(description);
         embed.setColor("477692");
         embed.setTimestamp();
@@ -453,9 +470,9 @@ module.exports = {
             let players = '';
             let emote = element.emoteId != null ? `<:${element.dropId}:${element.emoteId}>` : '';
             element.users.forEach(player => {
-                players += ` ${player.userName}`
+                players += ` <@${player.userId}>`
             })
-            content.push(`${emote}\`` + element.name.padEnd(30, ' ') + `[${element.users.length}/${element.capacity}]${players}\``);
+            content.push(`${emote}\`` + element.name.padEnd(30, ' ') + `[${element.users.length}/${element.capacity}]\`${players}`);
         });
 
         embed.addField("Slots:", content, false);
