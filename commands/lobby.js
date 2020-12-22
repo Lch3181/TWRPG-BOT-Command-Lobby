@@ -22,6 +22,7 @@ module.exports = {
         let slots = [];
         let inSlot = [];
         let item = [];
+        let playerNum = 0;
         let result, created;
         let str = [];
 
@@ -341,7 +342,7 @@ module.exports = {
                 break;
             case 'join':
                 //limit players to be less or equal to 10
-                let playerNum = 0;
+                playerNum = 0;
                 slots.forEach(slot => {
                     playerNum += slot.users.length;
                 })
