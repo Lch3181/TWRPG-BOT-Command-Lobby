@@ -466,7 +466,7 @@ module.exports = {
 
                 //remove user from all slot
                 slots.forEach(slot => {
-                    slot.users = slot.users.filter(user => user.userId !== mention.id)
+                    slot.users = slot.users.filter(user => user.userId !== userId)
                 })
 
                 //update lobby
