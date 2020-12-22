@@ -340,6 +340,20 @@ module.exports = {
                     });
                 break;
             case 'join':
+                //limit players to be less or equal to 10
+                let playerNum = 0;
+                slots.forEach(slot => {
+                    playerNum += slot.users.length;
+                })
+                if (playerNum + 1 > 10) {
+                    embed.setDescription(`Cannot have more than 10 players`);
+                    embed.setColor("A22C2C");
+                    return sendEx(message, embed)
+                        .then(message => {
+                            message.delete({ timeout: 5000 })
+                        });
+                }
+
                 inSlot = fuseSearch(slots, userId, "users.userId")
                 item = fuseSearch(slots, args[2], "name");
                 if (!item.length) {
@@ -460,11 +474,11 @@ module.exports = {
                 args.shift(); //remove command arg
 
                 //limit players to be less or equal to 10
-                let playerNum = 0;
+                playerNum = 0;
                 slots.forEach(slot => {
                     playerNum += slot.users.length;
                 })
-                if(playerNum + message.content.match(/<[@!\d]+>/g).length > 10){
+                if (playerNum + message.content.match(/<[@!\d]+>/g).length > 10) {
                     embed.setDescription(`Cannot have more than 10 players`);
                     embed.setColor("A22C2C");
                     return sendEx(message, embed)
@@ -573,10 +587,13 @@ module.exports = {
             await client.guilds.cache.get(result.guildId).channels.cache.get(result.channelId).send('<a:740300330490921042:771395031206330428>', embed);
         } else {
             const embedMessage = await sendEx(message, embed, '<a:740300330490921042:771395031206330428>')
-            result.messageId = embedMessage.id;
-            result.guildId = embedMessage.guild.id;
-            result.channelId = embedMessage.channel.id;
-            await result.save();
+                .catch(err => console.log(err))
+            if(embedMessage){
+                result.messageId = embedMessage.id;
+                result.guildId = embedMessage.guild.id;
+                result.channelId = embedMessage.channel.id;
+                await result.save();
+            }
         }
 
         return;
