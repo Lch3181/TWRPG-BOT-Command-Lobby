@@ -35,7 +35,8 @@ module.exports = {
                 let bossSearch = args[1];
                 if (args.length < 3) {
                     embed.setTitle('**Usage**');
-                    str = ['Host a Lobby',
+                    str = [' __**lobby owner only:**__ ',
+                        'Host a Lobby',
                         'Some have default value with an equal sign (you can leave them empty)',
                         '-lobby host | `<boss name>` | `<game name>` | `<@player(s) or @role(s)>` | `<bot=>` | `<realm=>` | `<rules=#rules>` | `<notes=Don\'t Die>`',
                         'Example: `-lobby host | Valtora | vl | @English Player @Russians Player | Lee Bot | EB/Giddo`']
@@ -54,7 +55,8 @@ module.exports = {
             case 'join':
                 if (args.length < 3) {
                     embed.setTitle('**Usage**');
-                    str = ['Join a Lobby',
+                    str = [' __**Anyone:**__ ',
+                        'Join a Lobby',
                         '-lobby join | `<@host>` | `<slot>`',
                         'Example: `-lobby join | @host | Essence of Storm`']
                     embed.setDescription(str.join('\n\n'));
@@ -73,7 +75,8 @@ module.exports = {
             case 'leave':
                 if (args.length < 2) {
                     embed.setTitle('**Usage**');
-                    str = ['Join a Lobby',
+                    str = [' __**Anyone:**__ ',
+                        'Join a Lobby',
                         '-lobby leave | `<@host>`',
                         'Example: `-lobby leave | @host']
                     embed.setDescription(str.join('\n\n'));
@@ -85,7 +88,8 @@ module.exports = {
                 //Error Handling
                 if (args.length < 2) {
                     embed.setTitle('**Usage**');
-                    str = ['Add player(s) to slot',
+                    str = [' __**lobby owner only:**__ ',
+                        'Add player(s) to slot',
                         '-lobby add | `<@player1(s)> slot` | `<@player2(s)> slot` | ',
                         'Example: `-lobby add | @player1 shackles | @player2 @player3 Essence of Storm`',
                         'To reserve a slot, just fill up the capacity with that player',
@@ -114,7 +118,8 @@ module.exports = {
                 //Error Handling
                 if (args.length < 2) {
                     embed.setTitle('**Usage**');
-                    str = ['Remove player(s) from slot(s)',
+                    str = [' __**lobby owner only:**__ ',
+                        'Remove player(s) from slot(s)',
                         '-lobby remove | `<@player(s)>`',
                         'Example: `-lobby remove | @player1 @player2`']
                     embed.setDescription(str.join('\n\n'));
@@ -131,9 +136,53 @@ module.exports = {
                 }
                 break;
             case 'start':
+                if (args[0] != 'start') {
+                    embed.setTitle('**Usage**');
+                    str = [' __**lobby owner only:**__ ',
+                        'Start the lobby',
+                        '-lobby start',
+                        'Example: `-lobby start`']
+                    embed.setDescription(str.join('\n\n'));
+                    embed.setColor("89922D");
+                    return sendEx(message, embed)
+                }
+                break;
             case 'remake':
+                if (args[0] != "remake") {
+                    embed.setTitle('**Usage**');
+                    str = [' __**lobby owner only:**__ ',
+                        'Remake lobby',
+                        'Some have default value with an equal sign (you can leave them empty)',
+                        '-lobby remake | `<Loot = Air>`',
+                        'Example: `-lobby remake | Essence of Storm`']
+                    embed.setDescription(str.join('\n\n'));
+                    embed.setColor("89922D");
+                    return sendEx(message, embed)
+                }
+                break;
             case 'unhost':
+                if (args[0] != "unhost") {
+                    embed.setTitle('**Usage**');
+                    str = [' __**lobby owner only:**__ ',
+                        'Unhost the lobby',
+                        '-lobby unhost',
+                        'Example: `-lobby unhost`']
+                    embed.setDescription(str.join('\n\n'));
+                    embed.setColor("89922D");
+                    return sendEx(message, embed)
+                }
+                break;
             case 'show':
+                if (args[0] != "show") {
+                    embed.setTitle('**Usage**');
+                    str = [' __**lobby owner only:**__ ',
+                        'Show the lobby',
+                        '-lobby show',
+                        'Example: `-lobby show`']
+                    embed.setDescription(str.join('\n\n'));
+                    embed.setColor("89922D");
+                    return sendEx(message, embed)
+                }
                 break;
             case '':
             default:
@@ -589,7 +638,7 @@ module.exports = {
         } else {
             const embedMessage = await sendEx(message, embed, '<a:740300330490921042:771395031206330428>')
                 .catch(err => console.log(err))
-            if(embedMessage){
+            if (embedMessage) {
                 result.messageId = embedMessage.id;
                 result.guildId = embedMessage.guild.id;
                 result.channelId = embedMessage.channel.id;
