@@ -12,13 +12,16 @@ module.exports = {
         var args = args.split('|').map(x => x.trim());
         let content = [];
         let userId = message.author.id;
-        let mention = message.mentions ? message.mentions.users.first() : null;
+        let mentions = message.mentions ? message.mentions.users : null;
+        let mention = message.mentions ? mentions.first() : null;
         let messageId = "";
         let guildId = message.guild.id;
         let channelId = message.channel.id;
         let lobby = { host: message.author.tag, mentions: [] };
+        let slot = "";
         let slots = [];
         let inSlot = [];
+        let item = [];
         let result, created;
         let str = [];
 
@@ -109,6 +112,9 @@ module.exports = {
                     message.mentions.roles.each(role => {
                         lobby.mentions.push(`<@&${role.id}>`)
                     });
+                    if (!lobby.mentions.length) {
+                        lobby.mentions.push(`@everyone`)
+                    }
                     lobby.bot = args[4] == null ? '' : args[4];
                     lobby.realm = args[5] == null ? '' : args[5];
                     lobby.rule = args[6] == null ? "#rules" : args[6];
@@ -250,7 +256,15 @@ module.exports = {
                         });
                 }
                 inSlot = fuseSearch(slots, userId, "users.userId")
-                let item = fuseSearch(slots, args[2], "name");
+                item = fuseSearch(slots, args[2], "name");
+                if (!item.length) {
+                    embed.setDescription(`${args[2]} not found in lobby`);
+                    embed.setColor("A22C2C");
+                    return sendEx(message, embed)
+                        .then(message => {
+                            message.delete({ timeout: 5000 })
+                        });
+                }
                 slots.forEach(element => {
                     if (element.dropId === item[0].dropId) {
                         //Error handling
@@ -360,12 +374,10 @@ module.exports = {
                             message.delete({ timeout: 5000 })
                         });
                 }
-                let mentions = message.mentions.users;
-
                 mentions.each(mention => {
-                    inSlot = fuseSearch(slots, mention.id, "users.userId")
+                    inSlots = fuseSearch(slots, mention.id, "users.userId")
                     //Error handling
-                    if (!inSlot.length) {
+                    if (!inSlots.length) {
                         embed.setDescription(`${mention.tag} is not in any slot`);
                         embed.setColor("A22C2C");
                         return sendEx(message, embed)
@@ -374,22 +386,18 @@ module.exports = {
                             });
                     }
 
-                    //remove user from slot
-                    slots.forEach(element => {
-                        if (element.dropId === inSlot[0].dropId) {
-                            var index = element.users.findIndex(function (item) {
-                                return item.userId === mention.id
-                            });
-                            element.users.splice(index, 1);
-                            //send success message
-                            embed.setDescription(`removing ${mention.tag} in slot ${element.name}`);
-                            embed.setColor("477692");
-                            sendEx(message, embed)
-                                .then(message => {
-                                    message.delete({ timeout: 5000 })
-                                });
-                        }
+                    //remove user from all slot
+                    slots.forEach(slot => {
+                        slot.users = slot.users.filter(user => user.userId !== mention.id)
                     })
+
+                    //send success message
+                    embed.setDescription(`removing ${mention.tag} from all slot(s)`);
+                    embed.setColor("477692");
+                    sendEx(message, embed)
+                        .then(message => {
+                            message.delete({ timeout: 5000 })
+                        });
                 })
 
 
@@ -409,6 +417,69 @@ module.exports = {
                     });
                 break;
             case 'add':
+                //Error Handling
+                if (!mention) {
+                    embed.setDescription('Please mention who to add');
+                    embed.setColor("A22C2C");
+                    return sendEx(message, embed)
+                        .then(message => {
+                            message.delete({ timeout: 5000 })
+                        });
+                }
+                args.forEach(arg => {
+                    let players = [];
+                    let targets = arg.match(/<[@!\d]+>/g) ? arg.match(/<[@!\d]+>/g) : [''];
+                    mentions.forEach(mention => {
+                        targets.forEach(target => {
+                            if (mention.id == target.replace(/[<@!>]/g, "")) {
+                                players.push(mention);
+                            }
+                        })
+                    })
+                    slot = arg.match(/\w+$/gm)
+                    if (slot != null) {
+                        item = fuseSearch(slots, slot[0], "name");
+                        if (item.length) {
+                            slots.forEach(element => {
+                                if (element.dropId === item[0].dropId) {
+                                    let ingame = lobby.status.includes('waiting') ? "true" : "false";
+                                    players.forEach(player => {
+                                        element.users.push({ userId: player.id, userName: player.tag, ingame })
+                                    })
+
+                                    //send success message
+                                    embed.setDescription(`Adding ${players} to ${lobby.gameName} in slot ${item[0].name}`);
+                                    embed.setColor("477692");
+                                    sendEx(message, embed)
+                                        .then(message => {
+                                            message.delete({ timeout: 5000 })
+                                        });
+                                }
+                            })
+                        } else if (slot[0] != 'add') {
+                            embed.setDescription(`${slot[0]} not found in lobby`);
+                            embed.setColor("A22C2C");
+                            return sendEx(message, embed)
+                                .then(message => {
+                                    message.delete({ timeout: 5000 })
+                                });
+                        }
+                    }
+                })
+                //update lobby
+                await Lobby.update({
+                    slots
+                }, {
+                    where: {
+                        userId
+                    }
+                });
+
+                //delete old message
+                message.channel.messages.fetch(messageId)
+                    .then(message => {
+                        message.delete();
+                    });
                 break;
             case 'help':
                 embed.setTitle('-lobby usage');
@@ -419,7 +490,7 @@ module.exports = {
                     '-lobby start',
                     '-lobby remake(rmk)|loots=Air',
                     '-lobby remove|@mention(s)',
-                    '-lobby add|@mention slot|@mention slot|...',
+                    '-lobby add|@mention(s) slot|@mention(s) slot...',
                     ' __**Anyone:**__ ',
                     '-lobby join|@mention|slot',
                     '-lobby leave|@mention'];
@@ -427,6 +498,13 @@ module.exports = {
                 embed.setColor("477692");
 
                 return sendEx(message, embed);
+                break;
+            default:
+                //delete old message
+                message.channel.messages.fetch(messageId)
+                    .then(message => {
+                        message.delete();
+                    });
                 break;
         }
 
@@ -437,8 +515,8 @@ module.exports = {
         });
         embed.setDescription(`${embed.description}\n\`\`\`Boss:   ${lobby.title}\nBot:    ${lobby.bot}\nRealm:  ${lobby.realm}\nRules:  ${lobby.rule}\nNotes:  ${lobby.note}\nStatus: ${lobby.status}\`\`\``);
         embed.setAuthor(`Host: ${message.author.tag}`);
-        embed.attachFiles({ attachment: `./twicons/${lobby.title} Icon.jpg`, name:'Thumbnail.jpg'});
-        embed.setThumbnail(`attachment://Thumbnail.jpg`);
+        embed.attachFiles({ attachment: `./twicons/${lobby.title} Icon.jpg`, name: `${lobby.title.replace(/[ _]/g, "")}Icon.jpg` });
+        embed.setThumbnail(`attachment://${lobby.title.replace(/[ _]/g, "")}Icon.jpg`);
         embed.setTitle(`Game Name: ${lobby.gameName}`);
         embed.setColor("477692");
         embed.setTimestamp();
@@ -448,7 +526,11 @@ module.exports = {
             element.users.forEach(player => {
                 players += ` <@${player.userId}>`
             })
-            content.push(`${emote}\`` + element.name.padEnd(30, ' ') + `[${element.users.length}/${element.capacity}]\`${players}`);
+            if (element.users.length > element.capacity) {
+                content.push(`${emote}\`` + element.name.padEnd(30, ' ') + `[${element.users.length}/${element.users.length}]\`${players}`);
+            } else {
+                content.push(`${emote}\`` + element.name.padEnd(30, ' ') + `[${element.users.length}/${element.capacity}]\`${players}`);
+            }
         });
 
         embed.addField("Slots:", content, false);
@@ -458,7 +540,7 @@ module.exports = {
             embed.addField("Drops:", `\`\`\` \`\`\``, false);
         }
 
-        if(lobby.status == 'unhosted') {
+        if (lobby.status == 'unhosted') {
             embed.setTitle(`~~${embed.title}~~`);
         }
 
