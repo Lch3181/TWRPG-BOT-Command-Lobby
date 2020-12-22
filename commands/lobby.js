@@ -29,15 +29,15 @@ module.exports = {
         //message.delete({ timeout: 5000 });
 
         //Error Handling/Documentation/Command Usage
-        switch (args[0]) {
+        switch (args[0].match(/^\w+/gm) ? args[0].match(/^\w+/gm)[0] : args[0]) {
             case 'host':
                 let bossSearch = args[1];
                 if (args.length < 3) {
                     embed.setTitle('**Usage**');
                     str = ['Host a Lobby',
                         'Some have default value with an equal sign (you can leave them empty)',
-                        '-lobby host|`<boss name>`|`<game name>`|`<@player(s) or @role(s)>`|`<bot=>`|`<realm=>`|`<rules=#rules>`|`<notes=Don\'t Die>`',
-                        'Example: `-lobby host|Valtora|vl|@English Player @Russians Player|Lee Bot|EB/Giddo`']
+                        '-lobby host | `<boss name>` | `<game name>` | `<@player(s) or @role(s)>` | `<bot=>` | `<realm=>` | `<rules=#rules>` | `<notes=Don\'t Die>`',
+                        'Example: `-lobby host | Valtora | vl | @English Player @Russians Player | Lee Bot | EB/Giddo`']
                     embed.setDescription(str.join('\n\n'));
                     embed.setColor("89922D");
                     return sendEx(message, embed)
@@ -54,8 +54,8 @@ module.exports = {
                 if (args.length < 3) {
                     embed.setTitle('**Usage**');
                     str = ['Join a Lobby',
-                        '-lobby join|`<@host>`|`<slot>`',
-                        'Example: `-lobby join|@host|Essence of Storm`']
+                        '-lobby join | `<@host>` | `<slot>`',
+                        'Example: `-lobby join | @host | Essence of Storm`']
                     embed.setDescription(str.join('\n\n'));
                     embed.setColor("89922D");
                     return sendEx(message, embed)
@@ -73,8 +73,8 @@ module.exports = {
                 if (args.length < 2) {
                     embed.setTitle('**Usage**');
                     str = ['Join a Lobby',
-                        '-lobby leave|`<@host>`',
-                        'Example: `-lobby leave|@host']
+                        '-lobby leave | `<@host>`',
+                        'Example: `-lobby leave | @host']
                     embed.setDescription(str.join('\n\n'));
                     embed.setColor("89922D");
                     return sendEx(message, embed)
@@ -85,16 +85,23 @@ module.exports = {
                 if (args.length < 2) {
                     embed.setTitle('**Usage**');
                     str = ['Add player(s) to slot',
-                        '-lobby add|`<@player1(s)> slot`|`<@player2(s)> slot`|',
-                        'Example: `-lobby add|@player1 shackles|@player2 @player3 Essence of Storm`',
+                        '-lobby add | `<@player1(s)> slot` | `<@player2(s)> slot` | ',
+                        'Example: `-lobby add | @player1 shackles | @player2 @player3 Essence of Storm`',
                         'To reserve a slot, just fill up the capacity with that player',
-                        'Example: `-lobby add|@myself @myself Essence of Storm`']
+                        'Example: `-lobby add | @myself @myself Essence of Storm`']
                     embed.setDescription(str.join('\n\n'));
                     embed.setColor("89922D");
                     return sendEx(message, embed)
                 }
                 if (!mention) {
                     embed.setDescription('Please mention who to add');
+                    embed.setColor("A22C2C");
+                    return sendEx(message, embed)
+                        .then(message => {
+                            message.delete({ timeout: 5000 })
+                        });
+                } else if (!args[1].match(/\w+$/gm)) {
+                    embed.setDescription('Please include which slot to add');
                     embed.setColor("A22C2C");
                     return sendEx(message, embed)
                         .then(message => {
@@ -107,8 +114,8 @@ module.exports = {
                 if (args.length < 2) {
                     embed.setTitle('**Usage**');
                     str = ['Remove player(s) from slot(s)',
-                        '-lobby remove|`<@player(s)>`',
-                        'Example: `-lobby remove|@player1 @player2`']
+                        '-lobby remove | `<@player(s)>`',
+                        'Example: `-lobby remove | @player1 @player2`']
                     embed.setDescription(str.join('\n\n'));
                     embed.setColor("89922D");
                     return sendEx(message, embed)
@@ -132,16 +139,16 @@ module.exports = {
                 embed.setTitle('**Usage**');
                 str = ['Some have default value with an equal sign (you can leave them empty)',
                     ' __**lobby owner only:**__ ',
-                    '-lobby host|`<boss name>`|`<game name>`|`<@player(s) or @role(s)>`|`<bot=>`|`<realm=>`|`<rules=#rules>`|`<notes=Don\'t Die>`',
+                    '-lobby host | `<boss name>` | `<game name>` | `<@player(s) or @role(s)>` | `<bot=>` | `<realm=>` | `<rules=#rules>` | `<notes=Don\'t Die>`',
                     '-lobby show',
                     '-lobby start',
-                    '-lobby remake|`<loots=Air>`',
-                    '-lobby unhost|`<loots=Air>`|`<notes=Thanks for coming>`',
-                    '-lobby add|`<@player1(s) slot>`|`<@player2(s) slot>`...',
-                    '-lobby remove|`<@player(s)>`',
+                    '-lobby remake | `<loots=Air>`',
+                    '-lobby unhost | `<loots=Air>` | `<notes=Thanks for coming>`',
+                    '-lobby add | `<@player1(s) slot>` | `<@player2(s) slot>`...',
+                    '-lobby remove | `<@player(s)>`',
                     ' __**Anyone:**__ ',
-                    '-lobby join|`<@host>`|`<slot>`',
-                    '-lobby leave|`<@host>`'];
+                    '-lobby join | `<@host>` | `<slot>`',
+                    '-lobby leave | `<@host>`'];
                 embed.setDescription(str.join("\n"));
                 embed.setColor("89922D");
 
@@ -175,7 +182,7 @@ module.exports = {
                     });
             }
         } else if (result == null && args[0] !== 'host') {
-            embed.setDescription('You have not host any lobby. Please check -lobby help');
+            embed.setDescription('You have not host any lobby. Please check -lobby');
             if (args[0] == 'join' && args[0] == 'leave') {
                 embed.setDescription(`${mention.tag} has not host any lobby. Please check -lobby`);
             }
@@ -259,11 +266,6 @@ module.exports = {
                 }
                 break;
             case 'start':
-                message.channel.send(`starting ${lobby.gameName}`)
-                    .then(message => {
-                        message.delete({ timeout: 5000 })
-                    });
-
                 lobby.status = 'started';
 
                 await Lobby.update({
@@ -301,9 +303,8 @@ module.exports = {
                     })
                 })
 
-                const output = await message.channel.send(`remaking ${result.lobby.gameName}${str}`);
-                if (!str.length) {
-                    output.delete({ timeout: 5000 });
+                if (str.length) {
+                    const output = await message.channel.send(`remaking ${result.lobby.gameName}${str}`);
                 }
 
                 //update lobby
@@ -318,11 +319,6 @@ module.exports = {
 
                 break;
             case 'unhost':
-                message.channel.send(`unhosting ${lobby.gameName}`)
-                    .then(message => {
-                        message.delete({ timeout: 5000 })
-                    });
-
                 lobby.status = 'unhosted';
                 lobby.drops.push(args[1] == null ? 'Air' : args[1]);
                 lobby.note = args[2] == null ? 'Thanks everyone for coming' : args[2];
@@ -374,14 +370,6 @@ module.exports = {
                         }
                         let ingame = lobby.status.includes('waiting') ? "true" : "false";
                         element.users.push({ userId, userName: message.author.tag, ingame })
-
-                        //send success message
-                        embed.setDescription(`joining ${result.lobby.gameName} slot ${item[0].name}`);
-                        embed.setColor("477692");
-                        sendEx(message, embed)
-                            .then(message => {
-                                message.delete({ timeout: 5000 })
-                            });
                     }
                 })
 
@@ -412,21 +400,9 @@ module.exports = {
                         });
                 }
 
-                //remove user from slot
-                slots.forEach(element => {
-                    if (element.dropId === inSlot[0].dropId) {
-                        var index = element.users.findIndex(function (item) {
-                            return item.userId === userId
-                        });
-                        element.users.splice(index, 1);
-                        //send success message
-                        embed.setDescription(`leaving ${result.lobby.gameName} slot ${element.name}`);
-                        embed.setColor("477692");
-                        sendEx(message, embed)
-                            .then(message => {
-                                message.delete({ timeout: 5000 })
-                            });
-                    }
+                //remove user from all slot
+                slots.forEach(slot => {
+                    slot.users = slot.users.filter(user => user.userId !== mention.id)
                 })
 
                 //update lobby
@@ -462,14 +438,6 @@ module.exports = {
                     slots.forEach(slot => {
                         slot.users = slot.users.filter(user => user.userId !== mention.id)
                     })
-
-                    //send success message
-                    embed.setDescription(`removing ${mention.tag} from all slot(s)`);
-                    embed.setColor("477692");
-                    sendEx(message, embed)
-                        .then(message => {
-                            message.delete({ timeout: 5000 })
-                        });
                 })
 
 
@@ -489,6 +457,21 @@ module.exports = {
                     });
                 break;
             case 'add':
+                args.shift(); //remove command arg
+
+                //limit players to be less or equal to 10
+                let playerNum = 0;
+                slots.forEach(slot => {
+                    playerNum += slot.users.length;
+                })
+                if(playerNum + message.content.match(/<[@!\d]+>/g).length > 10){
+                    embed.setDescription(`Cannot have more than 10 players`);
+                    embed.setColor("A22C2C");
+                    return sendEx(message, embed)
+                        .then(message => {
+                            message.delete({ timeout: 5000 })
+                        });
+                }
                 args.forEach(arg => {
                     let players = [];
                     let targets = arg.match(/<[@!\d]+>/g) ? arg.match(/<[@!\d]+>/g) : [''];
@@ -509,17 +492,9 @@ module.exports = {
                                     players.forEach(player => {
                                         element.users.push({ userId: player.id, userName: player.tag, ingame })
                                     })
-
-                                    //send success message
-                                    embed.setDescription(`Adding ${players} to ${lobby.gameName} in slot ${item[0].name}`);
-                                    embed.setColor("477692");
-                                    sendEx(message, embed)
-                                        .then(message => {
-                                            message.delete({ timeout: 5000 })
-                                        });
                                 }
                             })
-                        } else if (slot[0] != 'add') {
+                        } else {
                             embed.setDescription(`${slot[0]} not found in lobby`);
                             embed.setColor("A22C2C");
                             return sendEx(message, embed)
