@@ -184,6 +184,18 @@ module.exports = {
                     return sendEx(message, embed)
                 }
                 break;
+            case 'list':
+                if (args[0] != "list") {
+                    embed.setTitle('**Usage**');
+                    str = [' __**Anyone:**__ ',
+                        'Show a list of all the lobbies',
+                        '-lobby list',
+                        'Example: `-lobby list`']
+                    embed.setDescription(str.join('\n\n'));
+                    embed.setColor("89922D");
+                    return sendEx(message, embed)
+                }
+                break;
             case '':
             default:
                 embed.setTitle('**Usage**');
@@ -197,6 +209,7 @@ module.exports = {
                     '-lobby add | `<@player1(s) slot>` | `<@player2(s) slot>`...',
                     '-lobby remove | `<@player(s)>`',
                     ' __**Anyone:**__ ',
+                    '-lobby list',
                     '-lobby join | `<@host>` | `<slot>`',
                     '-lobby leave | `<@host>`'];
                 embed.setDescription(str.join("\n"));
@@ -231,7 +244,7 @@ module.exports = {
                         message.delete({ timeout: 5000 })
                     });
             }
-        } else if (result == null && args[0] !== 'host') {
+        } else if (result == null && args[0] !== 'host' && args[0] !== 'list') {
             embed.setDescription('You have not host any lobby. Please check -lobby');
             if (args[0] == 'join' && args[0] == 'leave') {
                 embed.setDescription(`${mention.tag} has not host any lobby. Please check -lobby`);
@@ -585,6 +598,29 @@ module.exports = {
                 break;
             case 'show':
                 break;
+            case 'list':
+                let lists = await Lobby.findAll({
+                    attributes: ['lobby', 'slots']
+                })
+                let hostList = [], bossList = [], capacityList = [];
+                if (lists) {
+                    embed.setTitle('Lobby');
+                    lists.forEach((list) => {
+                        let capacity = 0;
+                        list.slots.forEach(slot => {
+                            capacity += slot.users.length
+                        })
+                        hostList.push(list.lobby.host);
+                        bossList.push(list.lobby.title);
+                        capacityList.push(capacity + '/10');
+                    })
+                    embed.addField('Host:', `${hostList.join('\n')}`, true);
+                    embed.addField('Boss:', `${bossList.join('\n')}`, true);
+                    embed.addField('Capacity:', `${capacityList.join('\n')}`, true);
+                    embed.setColor("477692");
+                    return await sendEx(message, embed, '<a:740300330490921042:771395031206330428>')
+                }
+                break;
         }
 
         //message output
@@ -598,7 +634,6 @@ module.exports = {
         embed.setThumbnail(`attachment://${lobby.title.replace(/[ _]/g, "")}Icon.jpg`);
         embed.setTitle(`Game Name: ${lobby.gameName}`);
         embed.setColor("477692");
-        embed.setTimestamp();
         slots.forEach(element => {
             let players = '';
             let emote = element.emoteId != null ? `<:${element.dropId}:${element.emoteId}>` : '';
@@ -637,7 +672,6 @@ module.exports = {
             await client.guilds.cache.get(result.guildId).channels.cache.get(result.channelId).send('<a:740300330490921042:771395031206330428>', embed);
         } else {
             const embedMessage = await sendEx(message, embed, '<a:740300330490921042:771395031206330428>')
-                .catch(err => console.log(err))
             if (embedMessage) {
                 result.messageId = embedMessage.id;
                 result.guildId = embedMessage.guild.id;
