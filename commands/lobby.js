@@ -28,6 +28,128 @@ module.exports = {
         //purge user command
         //message.delete({ timeout: 5000 });
 
+        //Error Handling/Documentation/Command Usage
+        switch (args[0]) {
+            case 'host':
+                let bossSearch = args[1];
+                if (args.length < 3) {
+                    embed.setTitle('**Usage**');
+                    str = ['Host a Lobby',
+                        'Some have default value with an equal sign (you can leave them empty)',
+                        '-lobby host|`<boss name>`|`<game name>`|`<@player(s) or @role(s)>`|`<bot=>`|`<realm=>`|`<rules=#rules>`|`<notes=Don\'t Die>`',
+                        'Example: `-lobby host|Valtora|vl|@English Player @Russians Player|Lee Bot|EB/Giddo`']
+                    embed.setDescription(str.join('\n\n'));
+                    embed.setColor("89922D");
+                    return sendEx(message, embed)
+                } else if (bossSearch.length < 3) {
+                    embed.setDescription("You need three or more letters to continue your search!");
+                    embed.setColor("A22C2C");
+                    return sendEx(message, embed)
+                        .then(message => {
+                            message.delete({ timeout: 5000 })
+                        });
+                }
+                break;
+            case 'join':
+                if (args.length < 3) {
+                    embed.setTitle('**Usage**');
+                    str = ['Join a Lobby',
+                        '-lobby join|`<@host>`|`<slot>`',
+                        'Example: `-lobby join|@host|Essence of Storm`']
+                    embed.setDescription(str.join('\n\n'));
+                    embed.setColor("89922D");
+                    return sendEx(message, embed)
+                }
+                if (!mention) {
+                    embed.setDescription('Please mention which host to join');
+                    embed.setColor("A22C2C");
+                    return sendEx(message, embed)
+                        .then(message => {
+                            message.delete({ timeout: 5000 })
+                        });
+                }
+                break;
+            case 'leave':
+                if (args.length < 2) {
+                    embed.setTitle('**Usage**');
+                    str = ['Join a Lobby',
+                        '-lobby leave|`<@host>`',
+                        'Example: `-lobby leave|@host']
+                    embed.setDescription(str.join('\n\n'));
+                    embed.setColor("89922D");
+                    return sendEx(message, embed)
+                }
+                break;
+            case 'add':
+                //Error Handling
+                if (args.length < 2) {
+                    embed.setTitle('**Usage**');
+                    str = ['Add player(s) to slot',
+                        '-lobby add|`<@player1(s)> slot`|`<@player2(s)> slot`|',
+                        'Example: `-lobby add|@player1 shackles|@player2 @player3 Essence of Storm`',
+                        'To reserve a slot, just fill up the capacity with that player',
+                        'Example: `-lobby add|@myself @myself Essence of Storm`']
+                    embed.setDescription(str.join('\n\n'));
+                    embed.setColor("89922D");
+                    return sendEx(message, embed)
+                }
+                if (!mention) {
+                    embed.setDescription('Please mention who to add');
+                    embed.setColor("A22C2C");
+                    return sendEx(message, embed)
+                        .then(message => {
+                            message.delete({ timeout: 5000 })
+                        });
+                }
+                break;
+            case 'remove':
+                //Error Handling
+                if (args.length < 2) {
+                    embed.setTitle('**Usage**');
+                    str = ['Remove player(s) from slot(s)',
+                        '-lobby remove|`<@player(s)>`',
+                        'Example: `-lobby remove|@player1 @player2`']
+                    embed.setDescription(str.join('\n\n'));
+                    embed.setColor("89922D");
+                    return sendEx(message, embed)
+                }
+                if (!message.mentions) {
+                    embed.setDescription('Please mention which player to remove');
+                    embed.setColor("A22C2C");
+                    return sendEx(message, embed)
+                        .then(message => {
+                            message.delete({ timeout: 5000 })
+                        });
+                }
+                break;
+            case 'start':
+            case 'remake':
+            case 'unhost':
+            case 'show':
+                break;
+            case '':
+            default:
+                embed.setTitle('**Usage**');
+                str = ['Some have default value with an equal sign (you can leave them empty)',
+                    ' __**lobby owner only:**__ ',
+                    '-lobby host|`<boss name>`|`<game name>`|`<@player(s) or @role(s)>`|`<bot=>`|`<realm=>`|`<rules=#rules>`|`<notes=Don\'t Die>`',
+                    '-lobby show',
+                    '-lobby start',
+                    '-lobby remake|`<loots=Air>`',
+                    '-lobby unhost|`<loots=Air>`|`<notes=Thanks for coming>`',
+                    '-lobby add|`<@player1(s) slot>`|`<@player2(s) slot>`...',
+                    '-lobby remove|`<@player(s)>`',
+                    ' __**Anyone:**__ ',
+                    '-lobby join|`<@host>`|`<slot>`',
+                    '-lobby leave|`<@host>`'];
+                embed.setDescription(str.join("\n"));
+                embed.setColor("89922D");
+
+                sendEx(message, embed);
+                return
+                break;
+        }
+
         // get data
         //limit users only can apply commands on the same server that lobby was created
         if (args[0] === 'join' || args[0] === 'leave' && mention) {
@@ -52,10 +174,10 @@ module.exports = {
                         message.delete({ timeout: 5000 })
                     });
             }
-        } else if (result == null && args[0] !== 'host' && args[0] !== 'help') {
+        } else if (result == null && args[0] !== 'host') {
             embed.setDescription('You have not host any lobby. Please check -lobby help');
             if (args[0] == 'join' && args[0] == 'leave') {
-                embed.setDescription(`${mention.tag} has not host any lobby. Please check -lobby help`);
+                embed.setDescription(`${mention.tag} has not host any lobby. Please check -lobby`);
             }
             embed.setColor("A22C2C");
             return sendEx(message, embed)
@@ -75,30 +197,6 @@ module.exports = {
         switch (args[0]) {
             case 'host':
                 let bossSearch = args[1];
-
-                //Error Handling
-                if (args.length < 3) {
-                    embed.setDescription('Not enough arguements. Check with -lobby');
-                    embed.setColor("A22C2C");
-                    return sendEx(message, embed)
-                        .then(message => {
-                            message.delete({ timeout: 5000 })
-                        });
-                } else if (bossSearch.length < 3) {
-                    embed.setDescription("You need three or more letters to continue your search!");
-                    embed.setColor("A22C2C");
-                    return sendEx(message, embed)
-                        .then(message => {
-                            message.delete({ timeout: 5000 })
-                        });
-                } else if (args[2] == null) {
-                    embed.setDescription("You need a game name!");
-                    embed.setColor("A22C2C");
-                    return sendEx(message, embed)
-                        .then(message => {
-                            message.delete({ timeout: 5000 })
-                        });
-                }
 
                 let items = JSON.parse(fs.readFileSync('./twrpg-info/items.json', 'utf-8'));
                 let boss = fuseSearch(bosses, bossSearch, "name");
@@ -184,7 +282,6 @@ module.exports = {
 
                 break;
             case 'remake':
-            case 'rmk':
                 lobby.status = 'remaking(waiting)';
                 lobby.drops.push(args[1] == null ? 'Air' : args[1]);
 
@@ -247,14 +344,6 @@ module.exports = {
                     });
                 break;
             case 'join':
-                if (args.length < 3) {
-                    embed.setDescription('Not enough arguements. Check with -lobby');
-                    embed.setColor("A22C2C");
-                    return sendEx(message, embed)
-                        .then(message => {
-                            message.delete({ timeout: 5000 })
-                        });
-                }
                 inSlot = fuseSearch(slots, userId, "users.userId")
                 item = fuseSearch(slots, args[2], "name");
                 if (!item.length) {
@@ -356,24 +445,7 @@ module.exports = {
                     });
 
                 break;
-            case 'vanquish':
             case 'remove':
-                //Error Handling
-                if (!message.mentions) {
-                    embed.setDescription('Please mention which player');
-                    embed.setColor("A22C2C");
-                    return sendEx(message, embed)
-                        .then(message => {
-                            message.delete({ timeout: 5000 })
-                        });
-                } else if (args.length < 2) {
-                    embed.setDescription('Not enough arguements. Check with -lobby');
-                    embed.setColor("A22C2C");
-                    return sendEx(message, embed)
-                        .then(message => {
-                            message.delete({ timeout: 5000 })
-                        });
-                }
                 mentions.each(mention => {
                     inSlots = fuseSearch(slots, mention.id, "users.userId")
                     //Error handling
@@ -417,15 +489,6 @@ module.exports = {
                     });
                 break;
             case 'add':
-                //Error Handling
-                if (!mention) {
-                    embed.setDescription('Please mention who to add');
-                    embed.setColor("A22C2C");
-                    return sendEx(message, embed)
-                        .then(message => {
-                            message.delete({ timeout: 5000 })
-                        });
-                }
                 args.forEach(arg => {
                     let players = [];
                     let targets = arg.match(/<[@!\d]+>/g) ? arg.match(/<[@!\d]+>/g) : [''];
@@ -481,30 +544,7 @@ module.exports = {
                         message.delete();
                     });
                 break;
-            case 'help':
-                embed.setTitle('-lobby usage');
-                str = ['Some have default value with an equal sign (you can skip those arugements)',
-                    ' __**lobby owner only:**__ ',
-                    '-lobby host|boss|game name|@mention(s) or @role(s)|bot=|realm=|rules=#rules|notes=Don\'t Die',
-                    '-lobby unhost|loots=Air|notes=Thanks for coming',
-                    '-lobby start',
-                    '-lobby remake(rmk)|loots=Air',
-                    '-lobby remove|@mention(s)',
-                    '-lobby add|@mention(s) slot|@mention(s) slot...',
-                    ' __**Anyone:**__ ',
-                    '-lobby join|@mention|slot',
-                    '-lobby leave|@mention'];
-                embed.setDescription(str.join("\n"));
-                embed.setColor("477692");
-
-                return sendEx(message, embed);
-                break;
-            default:
-                //delete old message
-                message.channel.messages.fetch(messageId)
-                    .then(message => {
-                        message.delete();
-                    });
+            case 'show':
                 break;
         }
 
