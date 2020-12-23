@@ -235,7 +235,7 @@ module.exports = {
             result = await Lobby.findByPk(userId);
         }
 
-        if (result !== null && args[0] !== 'unhost') {
+        if (result !== null && args[0] !== 'unhost' && args[0] !== 'list') {
             if (result.guildId !== guildId || result.channelId !== channelId) {
                 embed.setDescription("Please send command in the same server and channel where you created that lobby or -lobby unhost");
                 embed.setColor("A22C2C");
@@ -244,7 +244,7 @@ module.exports = {
                         message.delete({ timeout: 5000 })
                     });
             }
-        } else if (result == null && args[0] !== 'host' && args[0] !== 'list') {
+        } else if (result == null && args[0] !== 'host') {
             embed.setDescription('You have not host any lobby. Please check -lobby');
             if (args[0] == 'join' && args[0] == 'leave') {
                 embed.setDescription(`${mention.tag} has not host any lobby. Please check -lobby`);
