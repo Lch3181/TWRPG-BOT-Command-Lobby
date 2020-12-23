@@ -600,11 +600,14 @@ module.exports = {
                 break;
             case 'list':
                 let lists = await Lobby.findAll({
-                    attributes: ['lobby', 'slots']
-                })
+                    attributes: ['lobby', 'slots'],
+                    where:{
+                        guildId:message.guild.id
+                    }
+                });
                 let hostList = [], bossList = [], capacityList = [];
-                if (lists) {
-                    embed.setTitle('Lobby');
+                embed.setTitle('Lobby');
+                if (lists.length) {
                     lists.forEach((list) => {
                         let capacity = 0;
                         list.slots.forEach(slot => {
@@ -617,9 +620,11 @@ module.exports = {
                     embed.addField('Host:', `${hostList.join('\n')}`, true);
                     embed.addField('Boss:', `${bossList.join('\n')}`, true);
                     embed.addField('Capacity:', `${capacityList.join('\n')}`, true);
-                    embed.setColor("477692");
-                    return await sendEx(message, embed, '<a:740300330490921042:771395031206330428>')
+                } else {
+                    embed.setDescription("The is no lobby in this server.")
                 }
+                embed.setColor("477692");
+                return await sendEx(message, embed, '<a:740300330490921042:771395031206330428>')
                 break;
         }
 
