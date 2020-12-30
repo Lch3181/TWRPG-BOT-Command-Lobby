@@ -99,7 +99,8 @@ module.exports = {
                         '-lobby add | `<@player1(s)> slot` | `<@player2(s)> slot` | ',
                         'Example: `-lobby add | @player1 shackles | @player2 @player3 Essence of Storm`',
                         'To reserve a slot, just fill up the capacity with that player',
-                        'Example: `-lobby add | @myself @myself Essence of Storm`']
+                        'Example: `-lobby add | @myself @myself Essence of Storm`',
+                        'Note: This command can passby capacity, even 10/10 on one slot']
                     embed.setDescription(str.join('\n\n'));
                     embed.setColor("89922D");
                     return sendEx(message, embed)
@@ -215,7 +216,7 @@ module.exports = {
                     '-lobby start',
                     '-lobby remake | `<loots=Air>`',
                     '-lobby unhost | `<loots=Air>` | `<notes=Thanks for coming>`',
-                    '-lobby add | `<@player1(s) slot>` | `<@player2(s) slot>`...',
+                    '-lobby add | `<@player1(s)> <slot>` | `<@player2(s)> <@player3(s)> <slot>`...',
                     '-lobby remove | `<@player(s)>`',
                     ' __**Anyone:**__ ',
                     '-lobby list',
