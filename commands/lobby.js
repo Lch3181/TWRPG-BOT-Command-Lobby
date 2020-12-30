@@ -1,9 +1,7 @@
 const fs = require('fs');
 const Fuse = require('fuse.js');
 const discord = require('discord.js');
-const client = new discord.Client();
 const Lobby = require('../models/Lobby');
-
 
 module.exports = {
     name: 'lobby',
@@ -11,7 +9,7 @@ module.exports = {
     cooldown: 3,
     usage: '<-lobby argument(s)>',
     guildOnly: true,
-    async execute(message, args) {
+    async execute(client, message, args) {
         let embed = new discord.MessageEmbed();
         var args = args.join(' ').split('|').map(x => x.trim());
         let bosses = JSON.parse(fs.readFileSync('./twrpg-info/bosses.json', 'utf-8'));
@@ -159,13 +157,15 @@ module.exports = {
                 }
                 break;
             case 'remake':
-                if (args[0] != "remake") {
+                if (args[0].replace(/[ <@!&>\d]+/g, '') != "remake") {
                     embed.setTitle('**Usage**');
                     str = [' __**lobby owner only:**__ ',
                         'Remake lobby',
                         'Some have default value with an equal sign (you can leave them empty)',
                         '-lobby remake | `<Loot = Air>`',
-                        'Example: `-lobby remake | Essence of Storm`']
+                        '-lobby remake `<@player>` `<@role>` | `<Loot = Air>`',
+                        'Example: `-lobby remake | Essence of Storm`',
+                        'Example: `-lobby remake @player1 @English | Essence of Storm`']
                     embed.setDescription(str.join('\n\n'));
                     embed.setColor("89922D");
                     return sendEx(message, embed)
@@ -279,7 +279,7 @@ module.exports = {
             slots = result.slots;
         }
 
-        switch (args[0]) {
+        switch (args[0].replace(/[ <@!&>\d]+/g, '')) {
             case 'host':
                 let bossSearch = args[1];
 
@@ -360,7 +360,8 @@ module.exports = {
                 break;
             case 'remake':
                 lobby.status = 'remaking(waiting)';
-                lobby.drops.push(args[1] == null ? 'Air' : args[1]);
+                lobby.drops.push(args[1] == null || args[1] == '' ? 'Air' : args[1]);
+                console.log(args);
 
                 //mention not ingame players to join
                 const notInGame = fuseSearch(slots, "false", "users.ingame");
@@ -390,13 +391,6 @@ module.exports = {
                 lobby.status = 'unhosted';
                 lobby.drops.push(args[1] == null ? 'Air' : args[1]);
                 lobby.note = args[2] == null ? 'Thanks everyone for coming' : args[2];
-
-                //delete old message
-                client.guilds.cache.get(guildId).channels.cache.get(channelId).messages.fetch(messageId)
-                    .then(message => {
-                        message.delete()
-                            .catch(err => console.log(err));
-                    });
 
                 await Lobby.update({
                     lobby
