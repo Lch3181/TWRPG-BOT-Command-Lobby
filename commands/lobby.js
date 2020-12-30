@@ -626,7 +626,9 @@ module.exports = {
         });
         embed.setDescription(`${embed.description}\n\`\`\`Boss:   ${lobby.title}\nBot:    ${lobby.bot}\nRealm:  ${lobby.realm}\nRules:  ${lobby.rule}\nNotes:  ${lobby.note}\nStatus: ${lobby.status}\`\`\``);
         embed.setAuthor(`Host: ${message.author.tag}`);
-        embed.attachFiles({ attachment: `./twicons/${lobby.title} Icon.jpg`, name: `${lobby.title.replace(/[ _]/g, "")}Icon.jpg` });
+        if (fs.existsSync(`./twicons/${lobby.title} Icon.jpg`)) {
+            embed.attachFiles({ attachment: `./twicons/${lobby.title} Icon.jpg`, name: `${lobby.title.replace(/[ _]/g, "")}Icon.jpg` });
+        }
         embed.setThumbnail(`attachment://${lobby.title.replace(/[ _]/g, "")}Icon.jpg`);
         embed.setTitle(`Game Name: ${lobby.gameName}`);
         embed.setColor("477692");
