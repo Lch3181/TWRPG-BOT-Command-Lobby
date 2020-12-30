@@ -1,30 +1,34 @@
 const fs = require('fs');
 const Fuse = require('fuse.js');
-const Discord = require('discord.js');
+const discord = require('discord.js');
+const client = new discord.Client();
+const Lobby = require('../models/Lobby');
+
 
 module.exports = {
     name: 'lobby',
     description: "for game lobby hosting template",
+    cooldown: 3,
     usage: '<boss name>',
-    async execute(client, message, args, Lobby) {
-        let embed = new Discord.MessageEmbed();
+    async execute(message, args) {
+        let embed = new discord.MessageEmbed();
+        var args = args.join(' ').split('|').map(x => x.trim());
         let bosses = JSON.parse(fs.readFileSync('./twrpg-info/bosses.json', 'utf-8'));
-        var args = args.split('|').map(x => x.trim());
         let content = [];
+        let str = [];
+        let guildId = message.guild.id;
+        let channelId = message.channel.id;
+        let messageId;
         let userId = message.author.id;
         let mentions = message.mentions ? message.mentions.users : null;
         let mention = message.mentions ? mentions.first() : null;
-        let messageId = "";
-        let guildId = message.guild.id;
-        let channelId = message.channel.id;
         let lobby = { host: message.author.tag, mentions: [] };
-        let slot = "";
+        let slot;
         let slots = [];
         let inSlot = [];
         let item = [];
         let playerNum = 0;
         let result, created;
-        let str = [];
 
         //purge user command
         //message.delete({ timeout: 5000 });
@@ -49,6 +53,7 @@ module.exports = {
                     return sendEx(message, embed)
                         .then(message => {
                             message.delete({ timeout: 5000 })
+                                .catch(err => console.log(err))
                         });
                 }
                 break;
@@ -69,6 +74,7 @@ module.exports = {
                     return sendEx(message, embed)
                         .then(message => {
                             message.delete({ timeout: 5000 })
+                                .catch(err => console.log(err))
                         });
                 }
                 break;
@@ -104,6 +110,7 @@ module.exports = {
                     return sendEx(message, embed)
                         .then(message => {
                             message.delete({ timeout: 5000 })
+                                .catch(err => console.log(err))
                         });
                 } else if (!args[1].match(/\w+$/gm)) {
                     embed.setDescription('Please include which slot to add');
@@ -111,6 +118,7 @@ module.exports = {
                     return sendEx(message, embed)
                         .then(message => {
                             message.delete({ timeout: 5000 })
+                                .catch(err => console.log(err))
                         });
                 }
                 break;
@@ -132,6 +140,7 @@ module.exports = {
                     return sendEx(message, embed)
                         .then(message => {
                             message.delete({ timeout: 5000 })
+                                .catch(err => console.log(err))
                         });
                 }
                 break;
@@ -221,20 +230,22 @@ module.exports = {
         }
 
         // get data
-        //limit users only can apply commands on the same server that lobby was created
-        if (args[0] === 'join' || args[0] === 'leave' && mention) {
+        if (args[0] === 'join' || args[0] === 'leave') {
+            if (!mention) {
+                embed.setDescription('Please mention which host');
+                embed.setColor("A22C2C");
+                return sendEx(message, embed)
+                    .then(message => {
+                        message.delete({ timeout: 5000 })
+                            .catch(err => console.log(err))
+                    });
+            }
             result = await Lobby.findByPk(mention.id);
-        } else if (args[0] === 'join' || args[0] === 'leave' && !mention) {
-            embed.setDescription('Please mention which host');
-            embed.setColor("A22C2C");
-            return sendEx(message, embed)
-                .then(message => {
-                    message.delete({ timeout: 5000 })
-                });
         } else {
             result = await Lobby.findByPk(userId);
         }
 
+        //limit users only can apply commands on the same server that lobby was created
         if (result !== null && args[0] !== 'unhost' && args[0] !== 'list') {
             if (result.guildId !== guildId || result.channelId !== channelId) {
                 embed.setDescription("Please send command in the same server and channel where you created that lobby or -lobby unhost");
@@ -242,9 +253,10 @@ module.exports = {
                 return sendEx(message, embed)
                     .then(message => {
                         message.delete({ timeout: 5000 })
+                            .catch(err => console.log(err))
                     });
             }
-        } else if (result == null && args[0] !== 'host') {
+        } else if (result == null && args[0] !== 'host' && args[0] !== 'list') {
             embed.setDescription('You have not host any lobby. Please check -lobby');
             if (args[0] == 'join' && args[0] == 'leave') {
                 embed.setDescription(`${mention.tag} has not host any lobby. Please check -lobby`);
@@ -253,6 +265,7 @@ module.exports = {
             return sendEx(message, embed)
                 .then(message => {
                     message.delete({ timeout: 5000 })
+                        .catch(err => console.log(err))
                 });
         }
 
@@ -272,6 +285,7 @@ module.exports = {
                 let boss = fuseSearch(bosses, bossSearch, "name");
 
                 if (boss.length > 0) {
+                    //fill up data
                     lobby.title = boss[0].name;
                     lobby.gameName = args[2];
                     message.mentions.users.each(mention => {
@@ -289,6 +303,7 @@ module.exports = {
                     lobby.note = args[7] == null ? "Don't Die" : args[7];
                     lobby.status = 'waiting';
                     lobby.drops = []
+
                     //Slots
                     if (boss[0].drops) {
                         for (let i = 0; i < boss[0].drops.length; i++) {
@@ -318,13 +333,15 @@ module.exports = {
                             }
                         });
                     }
-                }
-                else {
+
+                    //boss not found
+                } else {
                     embed.setDescription(`**${bossSearch}** was not found in the boss list\n**__HINT: If you do not know a boss's name, you can type -boss by itself to get a list of all bosses__**`);
                     embed.setColor("A22C2C");
                     return sendEx(message, embed)
                         .then(message => {
                             message.delete({ timeout: 5000 })
+                                .catch(err => console.log(err))
                         });
                 }
                 break;
@@ -338,26 +355,12 @@ module.exports = {
                         userId
                     }
                 });
-
-                //delete old message
-                message.channel.messages.fetch(messageId)
-                    .then(message => {
-                        message.delete();
-                    });
-
                 break;
             case 'remake':
                 lobby.status = 'remaking(waiting)';
                 lobby.drops.push(args[1] == null ? 'Air' : args[1]);
 
-                //delete old message
-                message.channel.messages.fetch(messageId)
-                    .then(message => {
-                        message.delete();
-                    });
-
                 //mention not ingame players to join
-
                 const notInGame = fuseSearch(slots, "false", "users.ingame");
                 notInGame.forEach(element => {
                     element.users.forEach(user => {
@@ -386,6 +389,13 @@ module.exports = {
                 lobby.drops.push(args[1] == null ? 'Air' : args[1]);
                 lobby.note = args[2] == null ? 'Thanks everyone for coming' : args[2];
 
+                //delete old message
+                client.guilds.cache.get(guildId).channels.cache.get(channelId).messages.fetch(messageId)
+                    .then(message => {
+                        message.delete()
+                            .catch(err => console.log(err));
+                    });
+
                 await Lobby.update({
                     lobby
                 }, {
@@ -395,12 +405,6 @@ module.exports = {
                 });
 
                 await result.destroy();
-
-                //delete old message
-                client.guilds.cache.get(guildId).channels.cache.get(channelId).messages.fetch(messageId)
-                    .then(message => {
-                        message.delete();
-                    });
                 break;
             case 'join':
                 //limit players to be less or equal to 10
@@ -414,6 +418,7 @@ module.exports = {
                     return sendEx(message, embed)
                         .then(message => {
                             message.delete({ timeout: 5000 })
+                                .catch(err => console.log(err))
                         });
                 }
 
@@ -425,6 +430,7 @@ module.exports = {
                     return sendEx(message, embed)
                         .then(message => {
                             message.delete({ timeout: 5000 })
+                                .catch(err => console.log(err))
                         });
                 }
                 slots.forEach(element => {
@@ -436,6 +442,7 @@ module.exports = {
                             return sendEx(message, embed)
                                 .then(message => {
                                     message.delete({ timeout: 5000 })
+                                        .catch(err => console.log(err))
                                 });
                         } else if (inSlot.length) {
                             embed.setDescription(`Already in slot ${inSlot[0].name}`);
@@ -443,6 +450,7 @@ module.exports = {
                             return sendEx(message, embed)
                                 .then(message => {
                                     message.delete({ timeout: 5000 })
+                                        .catch(err => console.log(err))
                                 });
                         }
                         let ingame = lobby.status.includes('waiting') ? "true" : "false";
@@ -457,13 +465,6 @@ module.exports = {
                         userId: mention.id
                     }
                 });
-
-                //delete old message
-                message.channel.messages.fetch(messageId)
-                    .then(message => {
-                        message.delete();
-                    });
-
                 break;
             case 'leave':
                 inSlot = fuseSearch(slots, userId, "users.userId")
@@ -474,13 +475,14 @@ module.exports = {
                     return sendEx(message, embed)
                         .then(message => {
                             message.delete({ timeout: 5000 })
+                                .catch(err => console.log(err))
                         });
                 }
 
                 //remove user from all slot
                 slots.forEach(slot => {
                     slot.users = slot.users.filter(user => user.userId !== userId)
-                })
+                });
 
                 //update lobby
                 await Lobby.update({
@@ -490,13 +492,6 @@ module.exports = {
                         userId: mention.id
                     }
                 });
-
-                //delete old message
-                message.channel.messages.fetch(messageId)
-                    .then(message => {
-                        message.delete();
-                    });
-
                 break;
             case 'remove':
                 mentions.each(mention => {
@@ -508,6 +503,7 @@ module.exports = {
                         return sendEx(message, embed)
                             .then(message => {
                                 message.delete({ timeout: 5000 })
+                                    .catch(err => console.log(err))
                             });
                     }
 
@@ -515,8 +511,7 @@ module.exports = {
                     slots.forEach(slot => {
                         slot.users = slot.users.filter(user => user.userId !== mention.id)
                     })
-                })
-
+                });
 
                 //update lobby
                 await Lobby.update({
@@ -526,12 +521,6 @@ module.exports = {
                         userId
                     }
                 });
-
-                //delete old message
-                message.channel.messages.fetch(messageId)
-                    .then(message => {
-                        message.delete();
-                    });
                 break;
             case 'add':
                 args.shift(); //remove command arg
@@ -547,6 +536,7 @@ module.exports = {
                     return sendEx(message, embed)
                         .then(message => {
                             message.delete({ timeout: 5000 })
+                                .catch(err => console.log(err))
                         });
                 }
                 args.forEach(arg => {
@@ -577,10 +567,12 @@ module.exports = {
                             return sendEx(message, embed)
                                 .then(message => {
                                     message.delete({ timeout: 5000 })
+                                        .catch(err => console.log(err))
                                 });
                         }
                     }
                 })
+
                 //update lobby
                 await Lobby.update({
                     slots
@@ -589,20 +581,14 @@ module.exports = {
                         userId
                     }
                 });
-
-                //delete old message
-                message.channel.messages.fetch(messageId)
-                    .then(message => {
-                        message.delete();
-                    });
                 break;
             case 'show':
                 break;
             case 'list':
                 let lists = await Lobby.findAll({
                     attributes: ['lobby', 'slots'],
-                    where:{
-                        guildId:message.guild.id
+                    where: {
+                        guildId: message.guild.id
                     }
                 });
                 let hostList = [], bossList = [], capacityList = [];
@@ -626,6 +612,15 @@ module.exports = {
                 embed.setColor("477692");
                 return await sendEx(message, embed, '<a:740300330490921042:771395031206330428>')
                 break;
+        }
+
+        //delete old message
+        if (messageId) {
+            message.channel.messages.fetch(messageId)
+                .then(message => {
+                    message.delete()
+                        .catch(err => console.log(err));
+                });
         }
 
         //message output
@@ -671,6 +666,7 @@ module.exports = {
             return sendEx(message, embed)
                 .then(message => {
                     message.delete({ timeout: 5000 })
+                        .catch(err => console.log(err))
                 });
         } else if (args[0] === 'unhost') {
             //send to old server&channel
@@ -706,5 +702,6 @@ function fuseSearch(Haystack, Needle, Keys) {
 }
 
 async function sendEx(message, embed, content = '') {
-    return message.channel.send(content, embed);
+    return message.channel.send(content, embed)
+        .catch(err => console.log(err));
 }
