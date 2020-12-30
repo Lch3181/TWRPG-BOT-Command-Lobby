@@ -9,7 +9,8 @@ module.exports = {
     name: 'lobby',
     description: "for game lobby hosting template",
     cooldown: 3,
-    usage: '<boss name>',
+    usage: '<-lobby argument(s)>',
+    guildOnly: true,
     async execute(message, args) {
         let embed = new discord.MessageEmbed();
         var args = args.join(' ').split('|').map(x => x.trim());
