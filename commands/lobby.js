@@ -658,7 +658,7 @@ module.exports = {
 
         //send embed message
         if (!created && args[0] === 'host') {
-            embed.setDescription('Already created one lobby, please \"-host unhost\" it first');
+            embed.setDescription('Already created one lobby, please \"-lobby unhost\" it first');
             embed.setColor("A22C2C");
             embed.fields = [];
             return sendEx(message, embed)
