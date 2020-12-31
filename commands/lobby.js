@@ -307,9 +307,39 @@ module.exports = {
                     lobby.drops = []
 
                     //Slots
+                    //sub boss
+                    if ('sub-bosses' in boss[0]) {
+                        boss[0]['sub-bosses'].forEach(subboss => {
+                            boss = fuseSearch(bosses, subboss, "id");
+                            for(let i = 0; i < boss[0].drops.length; i++){
+                                let drop_id = boss[0].drops[i]
+                                let dupeItem = fuseSearch(slots, drop_id, "dropId")
+                                if(dupeItem.length){
+                                    continue;
+                                }
+                                let item = fuseSearch(items, drop_id, "id");
+                                let capacity = 1;
+                                
+                                //slot cap
+                                if (item[0].type === '[Material]' && item[0].name != 'Coin of Effort') {
+                                    capacity = 2;
+                                } else {
+                                    capacity = 1;
+                                }
+                                slots.push({ dropId: drop_id, emoteId: item[0].emote_id, name: item[0].name, capacity, users: [] });
+
+                            }
+                        })
+                    }
+                    //main boss
+                    boss = fuseSearch(bosses, bossSearch, "name");
                     if (boss[0].drops) {
                         for (let i = 0; i < boss[0].drops.length; i++) {
                             let drop_id = boss[0].drops[i]
+                            let dupeItem = fuseSearch(slots, drop_id, "dropId")
+                            if(dupeItem.length){
+                                continue;
+                            }
                             let drop = fuseSearch(items, drop_id, "id");
                             let capacity = 1;
 
@@ -639,9 +669,9 @@ module.exports = {
                 players += ` <@${player.userId}>`
             })
             if (element.users.length > element.capacity) {
-                content.push(`${emote}\`` + element.name.padEnd(30, ' ') + `[${element.users.length}/${element.users.length}]\`${players}`);
+                content.push(`${emote}\`` + element.name.padEnd(35, ' ') + `[${element.users.length}/${element.users.length}]\`${players}`);
             } else {
-                content.push(`${emote}\`` + element.name.padEnd(30, ' ') + `[${element.users.length}/${element.capacity}]\`${players}`);
+                content.push(`${emote}\`` + element.name.padEnd(35, ' ') + `[${element.users.length}/${element.capacity}]\`${players}`);
             }
         });
 
